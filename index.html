@@ -1396,7 +1396,14 @@
       <input type="hidden" id="dr-thumb-name">
     </div>
     <hr class="drawer-divider">
-    <div class="form-group"><label>Transcription</label><textarea id="dr-description" rows="5" placeholder="Paste transcript link or transcript text here..."></textarea></div>
+    <div class="form-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="margin:0">Transcription</label>
+        <button onclick="drSaveTranscription()" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:var(--green);padding:3px 10px;border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;font-family:'Syne',sans-serif" id="dr-trans-save-btn">💾 Save Transcript Only</button>
+      </div>
+      <textarea id="dr-description" rows="8" placeholder="Paste full transcript or transcript Google Doc link here…" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:12px;font-family:'DM Mono',monospace;resize:vertical;outline:none;min-height:120px"></textarea>
+      <div id="dr-trans-status" style="font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace"></div>
+    </div>
   </div>
   <div class="drawer-footer">
     <div class="drawer-footer-left">
@@ -1623,6 +1630,32 @@ function getActiveEpInfo() {
                  : type === 'Short Form Video' ? 'Summary'
                  : type.replace(/\s+/g,'');
   return { epNum, typeSlug, name, type };
+}
+
+
+// ── Save transcription only (dedicated button) ─────────────────────────────
+async function drSaveTranscription() {
+  const recId = _drawerRecId;
+  if (!recId) { showToast('Open a record first', 'error'); return; }
+  const text = document.getElementById('dr-description')?.value?.trim() || '';
+  if (!text) { showToast('Transcription is empty', 'error'); return; }
+  const btn = document.getElementById('dr-trans-save-btn');
+  const status = document.getElementById('dr-trans-status');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
+  if (status) { status.textContent = 'Saving transcript to Airtable…'; status.style.color = 'var(--cyan)'; }
+  // Update in memory immediately
+  const rec = allRecords.find(r => r.id === recId);
+  if (rec) (rec.fields || rec).description = text;
+  // Save to AT and wait for response
+  const ok = await atUpdate(recId, { description: text });
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Save Transcript Only'; }
+  if (ok === false) {
+    if (status) { status.textContent = '❌ Save failed — check Airtable key or network'; status.style.color = 'var(--red)'; }
+    showToast('Transcript save failed', 'error');
+  } else {
+    if (status) { status.textContent = '✅ Transcript saved to Airtable'; status.style.color = 'var(--green)'; }
+    showToast('Transcript saved ✓', 'success');
+  }
 }
 
 function renderCurrentPage() {
@@ -1905,8 +1938,13 @@ async function atUpdate(recId, fields) {
       headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: atFields, typecast: true })
     });
-    if (!res.ok) { const e = await res.json().catch(()=>({})); console.error('[CM] atUpdate failed:', e.error?.message); }
-  } catch(e) { console.error('[CM] atUpdate:', e); }
+    if (!res.ok) {
+      const e = await res.json().catch(()=>({}));
+      console.error('[CM] atUpdate failed:', e.error?.message);
+      return false;
+    }
+    return true;
+  } catch(e) { console.error('[CM] atUpdate:', e); return false; }
 }
 
 async function atDelete(recId) {
@@ -2358,10 +2396,24 @@ async function saveDrawer() {
   if (_drawerRecId) {
     const rec = allRecords.find(r => r.id === _drawerRecId);
     if (rec) Object.assign(rec.fields || rec, fields);
+    // If transcription is being saved, wait for AT to confirm (not fire-and-forget)
+    const hasTranscript = fields.description && fields.description.trim().length > 50;
+    if (hasTranscript) {
+      const saveBtn = document.querySelector('#edit-drawer .btn-primary');
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving transcript…'; }
+      const ok = await atUpdate(_drawerRecId, fields);
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Record'; }
+      if (ok === false) {
+        showToast('⚠ Transcription failed to save — check your Airtable key', 'error');
+      } else {
+        showToast('Record + transcription saved ✓', 'success');
+      }
+    } else {
+      atUpdate(_drawerRecId, fields); // fire async for non-critical fields
+      showToast('Record updated ✓', 'success');
+    }
     closeDrawer();
     renderCurrentPage();
-    showToast('Record updated ✓', 'success');
-    atUpdate(_drawerRecId, fields); // fire async
   } else {
     // Disable save button to prevent double-submit
     const saveBtn = document.querySelector('#edit-drawer .btn-primary');
@@ -4420,7 +4472,93 @@ function renderAiUsagePanel() {
   window.smRecord=smRecord;
   window.smDownloadNow=smDownloadNow;
   window.smReRecord=smReRecord;
+  // ── SM blob state ─────────────────────────────────────────────────────────
+  let smBlob = null;
+  let smFilename = '';
+
+  function smEnableRecBtn(){
+    const btn=g('sm-rec-btn'); if(btn) btn.disabled=false;
+    const gb=g('sm-gen-btn'); if(gb) gb.disabled=false;
+  }
+
+  async function smRecord(){
+    const vid=g('sm-video');
+    if(!smLoaded){ showToast('Upload a video first','error'); return; }
+    if(smRecording){ showToast('Already recording','error'); return; }
+    const recBtn=g('sm-rec-btn'), dlBtn=g('sm-dl-btn');
+    recBtn.disabled=true; recBtn.textContent='Recording…';
+    if(dlBtn) dlBtn.style.display='none';
+    g('sm-dl-ready').style.display='none';
+    g('sm-progress-wrap').style.display='block';
+    smRecording=true; smBlob=null;
+    const fmtS=s=>{const m=Math.floor(s/60),sc=Math.floor(s%60);return m+':'+(sc<10?'0':'')+sc;};
+    const setProg=(pct,msg)=>{g('sm-progress-bar').style.width=Math.min(100,pct)+'%';g('sm-progress-label').textContent=msg;};
+    const mime=['video/mp4;codecs=avc1','video/mp4;codecs=h264','video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
+    const ext=mime.startsWith('video/mp4')?'.mp4':'.webm';
+    const dur=vid.duration;
+    const bitrate=Math.max(Math.min(Math.floor(500*1024*1024*8/dur),8000000),2000000);
+    const cvs=g('sm-preview'); cvs.width=SM_W; cvs.height=SM_H;
+    const stream=cvs.captureStream(30);
+    try{ vid.muted=false; vid.volume=1; const vs=vid.captureStream?vid.captureStream(30):null; if(vs) vs.getAudioTracks().forEach(t=>stream.addTrack(t)); }catch(e){}
+    const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:bitrate});
+    const chunks=[];
+    recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+    recorder.onstop=()=>{
+      smRecording=false;
+      if(!chunks.length){ showToast('Nothing recorded — try again','error'); recBtn.disabled=false; recBtn.textContent='Record Video'; g('sm-progress-wrap').style.display='none'; return; }
+      smBlob=new Blob(chunks,{type:mime}); smLastBlob=smBlob;
+      const {epNum:_ep}=getActiveEpInfo&&getActiveEpInfo()||{}; const day=g('sm-day')?.value||_ep||'0000';
+      smFilename='Ep'+day+'_Summary'+ext; smLastFilename=smFilename;
+      vid.muted=true; vid.pause();
+      setProg(100,'Done — '+((smBlob.size/1024/1024).toFixed(1))+' MB');
+      smDownloadNow();
+      g('sm-progress-wrap').style.display='none';
+      g('sm-dl-ready').style.display='block';
+      g('sm-dl-size').textContent=(smBlob.size/1024/1024).toFixed(1)+' MB · '+smFilename;
+      if(dlBtn){dlBtn.style.display='block';dlBtn.textContent='Download MP4';}
+      recBtn.disabled=false; recBtn.textContent='Re-record';
+      const smSaveBtn=document.getElementById('summary-maker-save-url-btn');
+      if(smSaveBtn&&localStorage.getItem('cm_active_ep_id')) smSaveBtn.style.display='block';
+      showToast('Summary downloaded','success');
+    };
+    recorder.start(100);
+    vid.pause(); vid.currentTime=0;
+    await new Promise(r=>{
+      vid.addEventListener('seeked',r,{once:true});
+      setTimeout(r,500);
+    });
+    vid.play();
+    const onEnded=()=>{ vid.removeEventListener('ended',onEnded); clearInterval(progInt); recorder.stop(); };
+    vid.addEventListener('ended',onEnded);
+    const recStart=Date.now();
+    const progInt=setInterval(()=>{
+      const el=vid.currentTime; const pct=Math.min(99,el/dur*100);
+      const ws=(Date.now()-recStart)/1000; const eta=pct>5?Math.max(0,(ws/pct*100)-ws):dur;
+      setProg(pct,'Recording '+Math.round(pct)+'% '+fmtS(el)+'/'+fmtS(dur)+(eta>2?' (~'+fmtS(eta)+' left)':''));
+      smDraw();
+      if(vid.ended||(pct>98&&vid.paused)){ clearInterval(progInt); vid.removeEventListener('ended',onEnded); if(recorder.state==='recording') recorder.stop(); }
+    },250);
+  }
+
+  function smDownloadNow(){
+    if(!smBlob){ showToast('Record first','error'); return; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(smBlob); a.download=smFilename||'Summary.mp4'; a.click();
+    showToast('Download started','success');
+  }
+
+  function smReRecord(){
+    smBlob=null; smLastBlob=null;
+    g('sm-dl-ready').style.display='none';
+    const dlBtn=g('sm-dl-btn'); if(dlBtn) dlBtn.style.display='none';
+    const recBtn=g('sm-rec-btn'); if(recBtn){recBtn.disabled=false;recBtn.textContent='Record Video';}
+  }
+
+  window.smDraw=smDraw;
+  window.smRedraw=smRedraw;
   window.smGenerate=smGenerate;
+  window.smRecord=smRecord;
+  window.smDownloadNow=smDownloadNow;
+  window.smReRecord=smReRecord;
   window.smDownloadAgain=smDownloadAgain;
 })();
 
@@ -6243,6 +6381,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
   window.lfmdPreviewClip=lfmdPreviewClip;
   window.lfmdScrubClick=lfmdScrubClick;
   window.lfmdDraw=lfmdDraw;
+  window.lfmdDraw=lfmdDraw;
   window.lfmdGenerate=lfmdGenerate;
   window.lfmdDlAgain=lfmdDlAgain;
 })();
@@ -6563,39 +6702,6 @@ async function callClaudeAI(userPrompt, systemPrompt='', maxTokens=600){
 // ════════════════════════════════════════════════════════════════════════════
 // 1. DASHBOARD — AI Daily Briefing
 // ════════════════════════════════════════════════════════════════════════════
-async function dashAiSummary(){
-  const btn=document.getElementById('dash-ai-btn');
-  const out=document.getElementById('dash-ai-result');
-  if(btn) btn.disabled=true;
-  if(out){out.style.display='block';out.textContent='✨ Analysing pipeline…';}
-  try{
-    const total=allRecords.length;
-    const byStatus={};
-    allRecords.forEach(r=>{const s=fv(r,'status')||'Unknown';byStatus[s]=(byStatus[s]||0)+1;});
-    const overdue=allRecords.filter(r=>isOverdue(r)).length;
-    const needsAI=allRecords.filter(r=>!fv(r,'aiGenerated')&&fv(r,'status')==='Optimisation and Design Done').length;
-    const readyToPublish=allRecords.filter(r=>fv(r,'status')==='Approved for Publishing').length;
-    const statusSummary=Object.entries(byStatus).map(([s,n])=>n+' '+s).join(', ');
-    const prompt=`You are a content operations manager giving Kevin Brittain a brief daily pipeline update. Be direct, no fluff.
-
-Pipeline today:
-- Total records: ${total}
-- Status breakdown: ${statusSummary}
-- Overdue: ${overdue}
-- Ready to publish: ${readyToPublish}
-- Need AI copywriting: ${needsAI}
-
-Write a 4-6 line briefing covering: what needs attention today, what's ready, any risks. UK English. Conversational. Start with the most urgent item.`;
-    const text=await callClaudeAI(prompt,'You are a direct operations assistant for Kevin Brittain.',300);
-    if(out){out.textContent=text;out.style.display='block';}
-    showToast('Daily briefing ready ✓','success');
-  }catch(e){
-    if(out){out.textContent='Error: '+e.message;out.style.display='block';}
-    showToast('AI briefing failed: '+e.message,'error');
-  }finally{
-    if(btn) btn.disabled=false;
-  }
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 // 2. PENDING EDITING — AI Metadata Filler
@@ -6678,142 +6784,14 @@ Respond ONLY as JSON: {"line1":"TITLE HERE","line2":"SUBTITLE HERE"}`;
 // ════════════════════════════════════════════════════════════════════════════
 // 4. LFMD MAKER — AI detect LFMD section timestamps from transcript
 // ════════════════════════════════════════════════════════════════════════════
-async function lfmdAiDetect(){
-  const btn=document.getElementById('lfmd-ai-btn');
-  if(btn){btn.disabled=true;btn.textContent='⏳ Scanning…';}
-  try{
-    const activeId=localStorage.getItem('cm_active_ep_id');
-    let transcript='', episodeName='';
-    if(activeId){
-      const rec=allRecords.find(r=>r.id===activeId);
-      if(rec){transcript=fv(rec,'description')||'';episodeName=fv(rec,'name')||'';}
-    }
-    if(!transcript){showToast('Set an active episode with a transcript first','error');return;}
-    // Also auto-fill day from episode name
-    const m=episodeName.match(/\d{3,4}/);
-    if(m){document.getElementById('lfmd-day').value=m[0];lfmdRedraw();}
-    const words=transcript.split(/\s+/);
-    const totalWords=words.length;
-    const prompt=`This is a transcript from Kevin Brittain's daily running video. Find the "Learnings From My Diary" section.
-
-Kevin typically says something like "learnings from my diary today", "the learnings from today", "what I learned today", or similar phrases to introduce this section. It usually comes near the end of the episode.
-
-Transcript:
-${transcript}
-
-1. Find the approximate word position where this section STARTS (the sentence where Kevin introduces "learnings from my diary")
-2. Find the approximate word position where this section ENDS (usually when the topic changes or he signs off)
-3. The full transcript has ${totalWords} words total.
-
-Respond ONLY as JSON: {"startPercent": 0.75, "endPercent": 0.95, "startPhrase": "first 6 words of section", "confidence": "high|medium|low"}
-
-startPercent and endPercent are 0.0-1.0 fractions of the total transcript length.`;
-    const raw=await callClaudeAI(prompt,'',200);
-    let obj;
-    try{obj=JSON.parse(raw.replace(/```json|```/g,'').trim());}
-    catch(e){throw new Error('Could not parse AI response');}
-    const vid=document.getElementById('lfmd-video');
-    const dur=vid?.duration||0;
-    if(dur>0&&obj.startPercent!==undefined){
-      const newStart=Math.max(0,Math.round(dur*obj.startPercent));
-      const newEnd=Math.min(dur,Math.round(dur*obj.endPercent));
-      window.lfmdStartTime=newStart;
-      window.lfmdEndTime=newEnd;
-      document.getElementById('lfmd-start-display').textContent=lfmdFmt(newStart);
-      document.getElementById('lfmd-end-display').textContent=lfmdFmt(newEnd);
-      lfmdUpdateClipInfo();lfmdUpdScrubber();
-      if(vid) vid.currentTime=newStart;
-      showToast('✓ LFMD section detected ('+obj.confidence+' confidence) — starts: "'+obj.startPhrase+'"','success');
-    } else if(dur===0){
-      showToast('Upload the video first, then click AI Detect to set timestamps','info');
-    }
-  }catch(e){
-    showToast('AI detect failed: '+e.message,'error');
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='✨ AI Detect LFMD Section';}
-  }
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 // 5. QUALITY CONTROL — AI Brand Voice Checker
 // ════════════════════════════════════════════════════════════════════════════
-async function qcAiCheck(){
-  const btn=document.getElementById('qc-ai-btn');
-  const out=document.getElementById('qc-ai-result');
-  if(btn) btn.disabled=true;
-  if(out){out.style.display='block';out.textContent='✨ Checking brand voice…';}
-  try{
-    const STATUS_ORDER=['Quality Control'];
-    const recs=allRecords.filter(r=>fv(r,'status')==='Quality Control').slice(0,5);
-    if(!recs.length){if(out)out.textContent='No records in Quality Control status.';return;}
-    const summaries=recs.map(r=>{
-      const name=fv(r,'name')||'Untitled';
-      // Pull first copy platform that has content
-      const platforms=['youtubeDesc','tiktokCaption','instagramCaption','facebookPost'];
-      let copy='';
-      for(const p of platforms){const v=fv(r,p);if(v){copy=v.slice(0,300);break;}}
-      return name+': '+copy;
-    }).join('\n\n---\n\n');
-    const prompt=`You are reviewing Runpreneur content for brand voice compliance before publishing.
-
-Kevin's rules:
-- First person, past tense, UK English
-- Conversational and direct — NO em dashes, NO "dive into", NO "let's unpack", NO "journey", NO "explore"
-- No marketing fluff or corporate speak
-- Mission references: 40,075km, raising £1M for children's causes (GOSH, BBC CIN)
-- Barefoot-style running (Vibram Five Fingers)
-
-Review these ${recs.length} episodes and flag any violations. For each, say: PASS or FAIL + what to fix.
-
-${summaries}`;
-    const text=await callClaudeAI(prompt,'You are a direct brand voice editor.',500);
-    if(out){out.textContent=text;out.style.display='block';}
-    showToast('Brand voice check complete ✓','success');
-  }catch(e){
-    if(out){out.textContent='Error: '+e.message;out.style.display='block';}
-    showToast('QC check failed: '+e.message,'error');
-  }finally{
-    if(btn) btn.disabled=false;
-  }
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 // 6. STATS — AI Performance Insights
 // ════════════════════════════════════════════════════════════════════════════
-async function statsAiInsights(){
-  const btn=document.getElementById('stats-ai-btn');
-  const out=document.getElementById('stats-ai-result');
-  if(btn) btn.disabled=true;
-  if(out){out.style.display='block';out.textContent='✨ Analysing performance data…';}
-  try{
-    // Get top 20 published records with stats
-    const published=allRecords.filter(r=>fv(r,'status')==='Published').slice(0,20);
-    if(published.length<3){if(out)out.textContent='Need at least 3 published episodes with stats for analysis.';return;}
-    const rows=published.map(r=>{
-      const name=fv(r,'name')||'Untitled';
-      const views=fv(r,'ytViews')||0;
-      const likes=fv(r,'ytLikes')||0;
-      const type=fv(r,'type')||'';
-      const date=fv(r,'pubDate')||'';
-      return name+' | Type: '+type+' | Views: '+views+' | Likes: '+likes+' | Date: '+date;
-    }).join('\n');
-    const prompt=`Analyse these Runpreneur published episodes and give Kevin 5 sharp, actionable insights:
-
-${rows}
-
-Cover: which topics/types get most views, engagement patterns, best days, any gaps. 
-Be specific with numbers. UK English. Direct — no fluff. 
-End with the single highest-ROI action Kevin should take this week.`;
-    const text=await callClaudeAI(prompt,'You are a data analyst for a content creator.',400);
-    if(out){out.textContent=text;out.style.display='block';}
-    showToast('Performance insights ready ✓','success');
-  }catch(e){
-    if(out){out.textContent='Error: '+e.message;out.style.display='block';}
-    showToast('Stats AI failed: '+e.message,'error');
-  }finally{
-    if(btn) btn.disabled=false;
-  }
-}
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -8242,843 +8220,6 @@ function wfGoToNextStatus(recId) {
   if (guide) guide.remove();
   navigateTo('copywriting');
 }
-
-
-function renderCurrentPage() {
-  try {
-    const active = document.querySelector('.page.active');
-    if (!active) return;
-    renderPage(active.id.replace('page-', ''));
-  } catch(e) {
-    console.error('[CM] renderCurrentPage outer error:', e);
-    // Never propagate — this runs inside loadAllRecords success block
-  }
-}
-
-// ============================================================
-// CONNECTION + API KEY
-// ============================================================
-function getApiKey() { return localStorage.getItem('cm_at_key') || ''; }
-function getAiKey()  { return localStorage.getItem('cm_ai_key')  || ''; }
-function saveToStorage() {} // no-op — live mode
-function markUnsaved()   {} // no-op — live mode
-
-function showAiKeyScreen(errorMsg) {
-  const old = document.getElementById('ai-key-overlay');
-  if (old) old.remove();
-  const existing = getAiKey();
-  const existingProxy = localStorage.getItem('cm_proxy_url') || '';
-  const o = document.createElement('div');
-  o.id = 'ai-key-overlay';
-  o.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.92)';
-  o.innerHTML = `
-    <div style="background:#181c27;border:1px solid #2a3050;border-radius:14px;padding:36px;max-width:500px;width:92%;box-sizing:border-box;font-family:'DM Mono',monospace">
-      <div style="font-size:22px;font-weight:800;color:#e8eaf0;margin-bottom:6px;font-family:'Syne',sans-serif">✨ AI Content Generator</div>
-      <div style="color:#6b7a99;font-size:13px;margin-bottom:20px;line-height:1.6">Enter your Anthropic API key and Cloudflare Worker proxy URL.</div>
-      ${errorMsg ? `<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:12px 14px;color:#fca5a5;font-size:12px;margin-bottom:16px;line-height:1.5">⚠ ${errorMsg}</div>` : ''}
-      <label style="font-size:11px;color:#6b7a99;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Anthropic API Key *</label>
-      <input id="cm-ai-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" value="${existing}"
-        style="width:100%;box-sizing:border-box;background:#0f1117;border:1px solid #2a3050;border-radius:7px;padding:10px 14px;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none;margin-bottom:4px">
-      <div style="font-size:11px;color:#3d4f6e;margin-bottom:14px">Get yours at <a href="https://console.anthropic.com/keys" target="_blank" style="color:#a855f7;text-decoration:none">console.anthropic.com/keys</a></div>
-      <label style="font-size:11px;color:#6b7a99;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Cloudflare Worker Proxy URL *</label>
-      <input id="cm-proxy-input" type="text" placeholder="https://content-machine-proxy.kevinbrittain.workers.dev" value="https://content-machine-proxy.kevinbrittain.workers.dev" autocomplete="off" spellcheck="false" value="${existingProxy}"
-        style="width:100%;box-sizing:border-box;background:#0f1117;border:1px solid #2a3050;border-radius:7px;padding:10px 14px;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none;margin-bottom:4px">
-      <div style="font-size:11px;color:#3d4f6e;margin-bottom:14px">Your Worker at <a href="https://dash.cloudflare.com" target="_blank" style="color:#a855f7;text-decoration:none">dash.cloudflare.com</a> → Workers & Pages → content-machine-proxy</div>
-      <label style="font-size:11px;color:#6b7a99;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Buffer API Key (LinkedIn + Twitter scheduling)</label>
-      <input id="cm-buffer-key-input" type="password" placeholder="Paste Buffer personal API key" autocomplete="off" spellcheck="false" value="${existingBuffer}"
-        style="width:100%;box-sizing:border-box;background:#0f1117;border:1px solid #2a3050;border-radius:7px;padding:10px 14px;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none;margin-bottom:4px">
-      <div style="font-size:11px;color:#3d4f6e;margin-bottom:20px">Get at <a href="https://buffer.com/developers" target="_blank" style="color:#4ade80;text-decoration:none">buffer.com/developers</a> → Settings → Generate API Key (free plan works)</div>
-      <div style="display:flex;gap:10px">
-        <button onclick="document.getElementById('ai-key-overlay').remove()"
-          style="flex:0 0 auto;background:none;color:#6b7a99;border:1px solid #2a3050;border-radius:7px;padding:12px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif">Cancel</button>
-        <button onclick="saveAiKey()"
-          style="flex:1;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:none;border-radius:7px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif">Save →</button>
-      </div>
-    </div>`;
-  document.body.appendChild(o);
-  const inp = document.getElementById('cm-ai-key-input');
-  if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') saveAiKey(); }); setTimeout(() => inp.focus(), 80); }
-}
-
-function saveAiKey() {
-  const keyInp   = document.getElementById('cm-ai-key-input');
-  const proxyInp = document.getElementById('cm-proxy-input');
-  const token = keyInp   ? keyInp.value.trim()  : '';
-  const proxy = proxyInp ? proxyInp.value.trim() : '';
-  if (!token || !token.startsWith('sk-ant')) { if (keyInp) keyInp.style.borderColor = '#ef4444'; return; }
-  if (!proxy) proxy = 'https://content-machine-proxy.kevinbrittain.workers.dev';
-  if (!proxy.startsWith('https://')) { if (proxyInp) proxyInp.style.borderColor = '#ef4444'; return; }
-  localStorage.setItem('cm_ai_key',    token);
-  localStorage.setItem('cm_proxy_url', proxy);
-  const bufferKey = (document.getElementById('cm-buffer-key-input')?.value || document.getElementById('settings-buffer-key')?.value || '').trim();
-  if(bufferKey) localStorage.setItem('cm_buffer_key', bufferKey);
-  const overlay = document.getElementById('ai-key-overlay');
-  if (overlay) overlay.remove();
-  showToast('AI settings saved ✓', 'success');
-}
-
-function showConnectScreen(errorMsg) {
-  const old = document.getElementById('connect-overlay');
-  if (old) old.remove();
-  const existingKey = getApiKey();
-  const o = document.createElement('div');
-  o.id = 'connect-overlay';
-  o.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.92)';
-  o.innerHTML = `
-    <div style="background:#181c27;border:1px solid #2a3050;border-radius:14px;padding:40px 36px;max-width:460px;width:92%;box-sizing:border-box;font-family:'DM Mono',monospace">
-      <div style="font-size:24px;font-weight:800;color:#e8eaf0;margin-bottom:6px;font-family:'Syne',sans-serif">⚙️ Content Machine</div>
-      <div style="color:#6b7a99;font-size:13px;margin-bottom:24px;line-height:1.6">Connect to your Airtable base to load live data.</div>
-      ${errorMsg ? `<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:12px 14px;color:#fca5a5;font-size:12px;margin-bottom:16px;line-height:1.5">⚠ ${errorMsg}</div>` : ''}
-      <label style="font-size:11px;color:#6b7a99;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Airtable Personal Access Token</label>
-      <input id="cm-token-input" type="password" placeholder="pat..." autocomplete="off" spellcheck="false" value="${existingKey}"
-        style="width:100%;box-sizing:border-box;background:#0f1117;border:1px solid #2a3050;border-radius:7px;padding:12px 14px;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none;margin-bottom:8px">
-      <div style="font-size:11px;color:#3d4f6e;margin-bottom:20px;line-height:1.7">
-        Get yours at <a href="https://airtable.com/create/tokens" target="_blank" style="color:#ff6b35;text-decoration:none">airtable.com/create/tokens</a><br>
-        Needs: <strong style="color:#6b7a99">data.records:read</strong> + <strong style="color:#6b7a99">data.records:write</strong><br>
-        Base: <strong style="color:#6b7a99">Operations Director</strong>
-      </div>
-      <button id="cm-connect-btn" onclick="attemptConnect()"
-        style="width:100%;background:#ff6b35;color:#fff;border:none;border-radius:7px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif">
-        Connect to Airtable →
-      </button>
-    </div>`;
-  document.body.appendChild(o);
-  const inp = document.getElementById('cm-token-input');
-  if (inp) {
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') attemptConnect(); });
-    setTimeout(() => inp.focus(), 80);
-  }
-}
-
-async function attemptConnect() {
-  const inp = document.getElementById('cm-token-input');
-  const btn = document.getElementById('cm-connect-btn');
-  const token = inp ? inp.value.trim() : '';
-  if (!token) { if (inp) inp.style.borderColor = '#ef4444'; return; }
-  if (btn) { btn.textContent = 'Connecting...'; btn.disabled = true; btn.style.opacity = '.7'; }
-  try {
-    const res = await fetch('https://api.airtable.com/v0/' + AT_BASE + '/' + AT_TABLE + '?pageSize=1', {
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
-    });
-    if (res.status === 401 || res.status === 403) {
-      const e = await res.json().catch(() => ({}));
-      showConnectScreen((e.error?.message || 'Invalid token') + '. Check scopes and base access.');
-      return;
-    }
-    if (!res.ok) { showConnectScreen('HTTP ' + res.status + ' — please try again.'); return; }
-    localStorage.setItem('cm_at_key', token);
-    const overlay = document.getElementById('connect-overlay');
-    if (overlay) overlay.remove();
-    loadAllRecords();
-  } catch(e) { showConnectScreen('Network error: ' + e.message); }
-}
-
-async function loadData() {
-  const key = getApiKey();
-  if (!key) { showConnectScreen(); return; }
-  setBadge('loading');
-  try {
-    const res = await fetch('https://api.airtable.com/v0/' + AT_BASE + '/' + AT_TABLE + '?pageSize=1', {
-      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' }
-    });
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem('cm_at_key');
-      showConnectScreen('Token rejected — please enter a fresh token.');
-      return;
-    }
-    if (!res.ok) { showConnectScreen('Airtable returned HTTP ' + res.status + '. Try reconnecting.'); return; }
-    loadAllRecords();
-  } catch(e) { showConnectScreen('Could not reach Airtable: ' + e.message); }
-}
-
-// ============================================================
-// AIRTABLE CRUD
-// ============================================================
-function normaliseRecord(atRec) {
-  const raw = atRec.fields || {};
-  const fields = {};
-  for (const [atId, val] of Object.entries(raw)) {
-    const key = FIELD_NAMES_REV[atId] || atId; // atId here is actually the field name from AT
-    if (val && typeof val === 'object' && !Array.isArray(val) && 'name' in val) {
-      fields[key] = val.name;
-    } else if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object' && 'name' in val[0]) {
-      fields[key] = val.map(v => v.name);
-    } else {
-      fields[key] = val;
-    }
-  }
-  return { id: atRec.id, fields };
-}
-
-function toAtFields(fields) {
-  // These fields must never be sent to Airtable
-  const skip = new Set([
-    ...SKIP_WRITE,
-    'thumbnailData', // base64 blob — too large for AT, use thumbnailUrl instead
-    'thumbnailName', // local metadata only
-  ]);
-  const out = {};
-  for (const [key, val] of Object.entries(fields)) {
-    if (skip.has(key)) continue;
-    const fieldName = FIELD_NAMES[key];
-    if (!fieldName) continue;
-    if (val === null || val === undefined || val === '') continue;
-    out[fieldName] = val;
-  }
-  return out;
-}
-
-// Guard: prevent concurrent fetches
-let _isLoadingRecords = false;
-
-async function loadAllRecords(attempt, isAutoRefresh) {
-  // Prevent concurrent calls — if already fetching, skip
-  if (_isLoadingRecords && attempt === 1) {
-    console.log('[CM] loadAllRecords: skipped — already in progress');
-    return;
-  }
-
-  attempt = attempt || 1;
-  const key = getApiKey();
-  if (!key) { showConnectScreen(); return; }
-
-  _isLoadingRecords = true;
-
-  // Only flash the loading badge on manual refresh (not silent auto-refresh)
-  if (!isAutoRefresh) setBadge('loading');
-
-  const tempRecords = [];
-  let offset = null;
-  let pages  = 0;
-
-  try {
-    do {
-      pages++;
-      let url = 'https://api.airtable.com/v0/' + AT_BASE + '/' + AT_TABLE + '?pageSize=100';
-      if (offset) url += '&offset=' + encodeURIComponent(offset);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 30000);
-      const res = await fetch(url, {
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-        signal: controller.signal
-      }).finally(() => clearTimeout(timer));
-
-      if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('cm_at_key');
-        const e = await res.json().catch(() => ({}));
-        setBadge('disconnected');
-        showConnectScreen('Token rejected: ' + (e.error?.message || 'please re-enter your token.'));
-        _isLoadingRecords = false;
-        return;
-      }
-      if (res.status === 429) {
-        await new Promise(r => setTimeout(r, 2500));
-        if (attempt < 4) {
-          _isLoadingRecords = false;
-          loadAllRecords(attempt + 1, isAutoRefresh);
-          return;
-        }
-        throw new Error('Airtable rate limited — try again shortly');
-      }
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e.error?.message || 'HTTP ' + res.status);
-      }
-      const data = await res.json();
-      (data.records || []).forEach(r => tempRecords.push(normaliseRecord(r)));
-      offset = data.offset || null;
-    } while (offset && pages < 50);
-
-    // ── SUCCESS ────────────────────────────────────────────────────────────────
-    const GRACE_MS = 30000;
-    const tempIds  = new Set(tempRecords.map(r => r.id));
-    const preserve = allRecords.filter(r => {
-      if (r.id.startsWith('recNEW')) return true;
-      if (tempIds.has(r.id)) return false;
-      const withinGrace = r._savedAt && (Date.now() - r._savedAt < GRACE_MS);
-      return withinGrace;
-    });
-    allRecords = [...preserve, ...tempRecords];
-    console.log('[CM] loadAllRecords OK: pages=' + pages + ' total=' + allRecords.length + (isAutoRefresh ? ' (auto)' : ' (manual)'));
-
-    // Set badge BEFORE render — render errors must not change badge state
-    setBadge('live', allRecords.length);
-
-    // Render in its own try-catch — a render crash must NEVER affect the sync badge
-    try {
-      renderCurrentPage();
-    } catch(renderErr) {
-      console.error('[CM] renderCurrentPage threw — data loaded OK but page render failed:', renderErr);
-    }
-
-    // Only show toast on manual refresh
-    if (!isAutoRefresh) showToast('● ' + allRecords.length + ' records loaded', 'success');
-
-    // Reset auto-refresh timer
-    if (_refreshTimer) clearInterval(_refreshTimer);
-    _refreshTimer = setInterval(() => {
-      if (getApiKey() && !_isLoadingRecords) loadAllRecords(1, true);
-    }, 180000);
-
-  } catch(e) {
-    // ── FAILURE ───────────────────────────────────────────────────────────────
-    const isTimeout = e.name === 'AbortError';
-    const isNetwork = isTimeout || (e.message || '').toLowerCase().match(/fetch|network|failed to|load/);
-    const errMsg    = isTimeout ? 'Connection timed out' : (e.message || 'Network error');
-
-    // Auto-retry for transient network errors, up to 3 attempts
-    if (attempt < 4 && isNetwork) {
-      const delay = attempt * 3000;
-      console.warn('[CM] loadAllRecords attempt', attempt, 'failed:', errMsg, '— retry in', delay, 'ms');
-      _isLoadingRecords = false;
-      setTimeout(() => loadAllRecords(attempt + 1, isAutoRefresh), delay);
-      return;
-    }
-
-    // Only show error badge if we have no data at all (first load)
-    // If we have data, keep the live badge — data is still valid
-    if (allRecords.length === 0) {
-      setBadge('error');
-    }
-    // else: keep whatever badge state was set — don't overwrite live with error
-
-    console.error('[CM] loadAllRecords failed after', attempt, 'attempts:', e);
-    if (!isAutoRefresh) showToast('Sync failed: ' + errMsg, 'error');
-
-    if (allRecords.length > 0) {
-      try { renderCurrentPage(); } catch(renderErr) { console.error('[CM] render error:', renderErr); }
-    }
-  } finally {
-    _isLoadingRecords = false;
-  }
-}
-
-async function atCreate(fields) {
-  const key = getApiKey();
-  if (!key) { showToast('No Airtable token', 'error'); return null; }
-  const payload = toAtFields(fields);
-  if (!Object.keys(payload).length) { showToast('Nothing to save', 'error'); return null; }
-  try {
-    const res = await fetch('https://api.airtable.com/v0/' + AT_BASE + '/' + AT_TABLE, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ records: [{ fields: payload }], typecast: true })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const msg = data.error?.message || data.error?.type || ('HTTP ' + res.status);
-      showToast('Airtable error: ' + msg, 'error');
-      console.error('[CM] atCreate failed:', msg, JSON.stringify(data));
-      return null;
-    }
-    return data.records?.[0] ? normaliseRecord(data.records[0]) : null;
-  } catch(e) {
-    showToast('Network error: ' + e.message, 'error');
-    console.error('[CM] atCreate exception:', e);
-    return null;
-  }
-}
-
-async function atUpdate(recId, fields) {
-  const key = getApiKey();
-  if (!key || !recId || recId.startsWith('recNEW')) return;
-  const atFields = toAtFields(fields);
-  if (!Object.keys(atFields).length) return;
-  try {
-    const res = await fetch('https://api.airtable.com/v0/' + AT_BASE + '/' + AT_TABLE + '/' + recId, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: atFields, typecast: true })
-    });
-    if (!res.ok) { const e = await res.json().catch(()=>({})); console.error('[CM] atUpdate failed:', e.error?.message); }
-  } catch(e) { console.error('[CM] atUpdate:', e); }
-}
-
-async function atDelete(recId) {
-  const key = getApiKey();
-  if (!key || !recId || recId.startsWith('recNEW')) return;
-  try {
-    await fetch('https://api.airtable.com/v0/' + AT_BASE + '/' + AT_TABLE + '/' + recId, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + key }
-    });
-  } catch(e) { console.error('atDelete:', e); }
-}
-
-function setBadge(state, count) {
-  const b = document.getElementById('live-badge');
-  const l = document.getElementById('sync-label');
-  if (!b) return;
-  const styles = {
-    loading:      { text:'⟳ Loading...',          bg:'rgba(234,179,8,.15)',  color:'#fbbf24', border:'rgba(234,179,8,.3)'  },
-    live:         { text:'● Live — '+(count||0)+' records', bg:'rgba(34,197,94,.15)', color:'#22c55e', border:'rgba(34,197,94,.3)'  },
-    error:        { text:'✗ Error — click to retry', bg:'rgba(239,68,68,.15)', color:'#ef4444', border:'rgba(239,68,68,.3)'  },
-    errorMsg:     { text:'✗ Error — click to retry', bg:'rgba(239,68,68,.15)', color:'#ef4444', border:'rgba(239,68,68,.3)'  },
-    disconnected: { text:'🔑 Click to reconnect',  bg:'rgba(255,107,53,.15)', color:'#ff6b35', border:'rgba(255,107,53,.3)'  },
-  };
-  const s = styles[state] || styles.loading;
-  b.textContent = s.text;
-  b.style.background = s.bg; b.style.color = s.color; b.style.borderColor = s.border;
-  b.onclick = state === 'error' ? loadAllRecords : state === 'disconnected' ? showConnectScreen : null;
-  if (state === 'live' && l) l.textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-}
-
-// ============================================================
-// HELPERS
-// ============================================================
-function fv(r, key) {
-  if (!r) return '';
-  const f = r.fields || r;
-  const val = f[key];
-  if (val === null || val === undefined) return '';
-  if (typeof val === 'object' && !Array.isArray(val) && 'name' in val) return val.name;
-  if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object' && 'name' in val[0]) return val.map(v => v.name).join(', ');
-  return val;
-}
-
-function fvn(r, key) { return parseFloat(fv(r, key)) || 0; }
-
-function fmtDate(d) {
-  if (!d) return '—';
-  try {
-    const dt = new Date(d + (String(d).length === 10 ? 'T00:00:00' : ''));
-    if (isNaN(dt)) return d;
-    return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-  } catch(e) { return d; }
-}
-
-function isOverdue(r) {
-  if (fv(r,'status') === 'Published') return false;
-  const d = fv(r, 'pubDate');
-  if (!d) return false;
-  return new Date(d) < new Date(new Date().toDateString());
-}
-
-function newId() { return 'recNEW' + Date.now() + Math.random().toString(36).slice(2, 7); }
-
-function getResponsibleName(r) {
-  const val = fv(r, 'responsible');
-  if (!val) return '—';
-  if (typeof val === 'object' && val.name) return val.name;
-  return String(val);
-}
-
-function getByStatus(statuses) {
-  return allRecords.filter(r => statuses.includes(fv(r, 'status')));
-}
-
-function filterByCat(recs, cat) {
-  if (!cat) return recs;
-  return recs.filter(r => fv(r, 'category') === cat);
-}
-
-function resetFilters(ids) {
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.tagName === 'SELECT' ? (el.selectedIndex = 0) : (el.value = '');
-  });
-}
-
-// FIX: was using wrong CSS classes ('status-badge', 'type-badge'). Correct class is 'badge'.
-function statusBadge(status) {
-  const map = {
-    'New Upload':'badge-new', 'Editing and Optimisation in Progress':'badge-editing',
-    'Optimisation and Design Done':'badge-optdone', 'Copies in Progress':'badge-copies',
-    'Quality Control':'badge-qc', 'Approved for Publishing':'badge-approved',
-    'YT Publishing & SEO in Progress':'badge-ytseo', 'Ready to publish on other platforms':'badge-readypub',
-    'Publishing In Progress':'badge-pubprog', 'Published':'badge-published'
-  };
-  return `<span class="badge ${map[status]||'badge-new'}">${status||'—'}</span>`;
-}
-
-function typeBadge(type) {
-  const map = {
-    'Short Form Video':'type-short', 'Long Form Video':'type-long',
-    'Learnings From My Diary':'type-diary', 'Image':'type-image',
-    'Audio':'type-audio', 'Written':'type-written'
-  };
-  return type ? `<span class="badge ${map[type]||''}">${type}</span>` : '';
-}
-
-// ============================================================
-// COPY FIELD CONFIGS
-// ============================================================
-function getCopyFields(type) {
-  if (type === 'Long Form Video') return [
-    { key:'copy_blog',    label:'Blog Article (800–1200 words)',                    rows:14 },
-    { key:'copy_blog_desc', label:'Blog Post Description (SEO · 150-160 chars)',            rows:3  },
-    { key:'copy_yt',      label:'YouTube Full Post (Title + Description + Hashtags)', rows:7  },
-    { key:'copy_podcast', label:'Podcast Post (Title + Description + Hashtags)',     rows:5  },
-  ];
-  if (type === 'Learnings From My Diary') return [
-    { key:'copy_fb_post',    label:'Facebook Post',                      rows:5 },
-    { key:'copy_insta_post', label:'Instagram Post',                     rows:5 },
-    { key:'copy_li',         label:'LinkedIn Post',                      rows:6 },
-    { key:'copy_threads',    label:'Threads Post (max 500 chars)',       rows:4 },
-    { key:'copy_x',          label:'X / Twitter Post (max 300 chars)',   rows:3 },
-    { key:'copy_tiktok',     label:'TikTok Post',                        rows:4 },
-    { key:'copy_yt_reels',   label:'YouTube Reels Post',                 rows:4 },
-  ];
-  if (type === 'Short Form Video') return [
-    { key:'copy_fb_reels',   label:'Facebook Reels Post',                rows:4 },
-    { key:'copy_insta_reels',label:'Instagram Reels Post',               rows:4 },
-    { key:'copy_li',         label:'LinkedIn Post',                      rows:6 },
-    { key:'copy_threads',    label:'Threads Post (max 500 chars)',       rows:4 },
-    { key:'copy_x',          label:'X / Twitter Post (max 300 chars)',   rows:3 },
-    { key:'copy_tiktok',     label:'TikTok Post',                        rows:4 },
-    { key:'copy_yt_reels',   label:'YouTube Reels Post',                 rows:4 },
-  ];
-  return [];
-}
-
-function getPlatformLinks(type) {
-  const base = [
-    { key:'ytLink',        label:'YouTube Link',        ph:'https://youtube.com/watch?v=...' },
-    { key:'fbPostLink',    label:'Facebook Post Link',  ph:'https://facebook.com/...' },
-    { key:'instaPostLink', label:'Instagram Post Link', ph:'https://instagram.com/p/...' },
-    { key:'liLink',        label:'LinkedIn Post Link',  ph:'https://linkedin.com/...' },
-    { key:'threadsLink',   label:'Threads Link',        ph:'https://threads.net/...' },
-    { key:'xLink',         label:'X / Twitter Link',    ph:'https://x.com/...' },
-    { key:'tiktokLink',    label:'TikTok Link',         ph:'https://tiktok.com/...' },
-  ];
-  if (type === 'Long Form Video') {
-    return [...base,
-      { key:'podcastLink', label:'Podcast Link', ph:'https://...' },
-      { key:'blogLink',    label:'Blog Link',    ph:'https://...' },
-    ];
-  }
-  return base;
-}
-
-// ============================================================
-// DASHBOARD
-// ============================================================
-function renderDashboard() {
-  const pipeline = [
-    { label:'New Upload',       key:'New Upload',                             colour:'#ef4444' },
-    { label:'Editing',          key:'Editing and Optimisation in Progress',   colour:'#3b82f6' },
-    { label:'Opt. Done',        key:'Optimisation and Design Done',           colour:'#06b6d4' },
-    { label:'Copywriting',      key:'Copies in Progress',                     colour:'#14b8a6' },
-    { label:'QC',               key:'Quality Control',                        colour:'#eab308' },
-    { label:'Approved',         key:'Approved for Publishing',                colour:'#22c55e' },
-    { label:'Ready',            key:'Ready to publish on other platforms',     colour:'#ec4899' },
-    { label:'Publishing',       key:'Publishing In Progress',                 colour:'#06b6d4' },
-    { label:'Published',        key:'Published',                              colour:'#22c55e' },
-  ];
-  const clsMap = {
-    '#ef4444':'red','#3b82f6':'blue','#06b6d4':'cyan','#14b8a6':'cyan',
-    '#eab308':'yellow','#22c55e':'green','#ff6b35':'orange','#ec4899':'pink'
-  };
-  const counts = {};
-  pipeline.forEach(p => { counts[p.key] = allRecords.filter(r => fv(r,'status') === p.key).length; });
-
-  const aiCount = allRecords.filter(r => fv(r,'aiGenerated') === true || fv(r,'aiGenerated') === 1).length;
-  document.getElementById('dash-stats').innerHTML =
-    pipeline.map(p => `<div class="stat-card ${clsMap[p.colour]||''}"><div class="label">${p.label}</div><div class="value">${counts[p.key]}</div></div>`).join('') +
-    `<div class="stat-card" style="border-color:rgba(168,85,247,.4)"><div class="label" style="color:#a855f7">✨ AI Generated</div><div class="value" style="color:#a855f7">${aiCount}</div></div>` +
-    `<div class="stat-card"><div class="label">Total Records</div><div class="value">${allRecords.length}</div></div>`;
-
-  const _pipeVals = pipeline.map(p => counts[p.key] || 0); const maxCount = _pipeVals.length ? Math.max(..._pipeVals, 1) : 1;
-  const _pipeChart = document.getElementById('pipeline-chart'); if(_pipeChart) _pipeChart.innerHTML = pipeline.map(p => {
-    const pct = Math.round((counts[p.key] / maxCount) * 100);
-    return `<div class="pipeline-row">
-      <div class="pipeline-label">${p.label}</div>
-      <div class="pipeline-bar-bg"><div class="pipeline-bar" style="width:${Math.max(pct,2)}%;background:${p.colour}"></div></div>
-      <div class="pipeline-count">${counts[p.key]}</div>
-    </div>`;
-  }).join('');
-
-  // Show AI usage panel
-  const aiPanel = document.getElementById('dash-ai-panel');
-  if (aiPanel) { aiPanel.style.display = 'block'; renderAiUsagePanel(); }
-
-  const published = getByStatus(['Published'])
-    .sort((a,b) => fvn(b,'engMonth') - fvn(a,'engMonth'))
-    .slice(0, 10);
-  document.getElementById('top10-body').innerHTML = published.length
-    ? published.map((r,i) => `<tr onclick="openDetail('${r.id}')">
-        <td style="font-family:'DM Mono',monospace;color:var(--muted)">${i+1}</td>
-        <td class="td-name">${fv(r,'name')||'—'}</td>
-        <td>${fmtDate(fv(r,'dateYT'))}</td>
-        <td style="font-family:'DM Mono',monospace;color:var(--accent)">${fvn(r,'engMonth').toLocaleString()}</td>
-        <td style="font-family:'DM Mono',monospace;color:var(--muted)">#${i+1}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="5" class="empty-state">No published records yet</td></tr>';
-}
-
-// ============================================================
-// CALENDAR
-// ============================================================
-function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
-function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
-function calToday() { calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); renderCalendar(); }
-
-function renderCalendar() {
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-label').textContent = MONTHS[calMonth] + ' ' + calYear;
-
-  let startDow = new Date(calYear, calMonth, 1).getDay();
-  startDow = startDow === 0 ? 6 : startDow - 1; // Mon = 0
-
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const daysInPrev  = new Date(calYear, calMonth,     0).getDate();
-  const today = new Date();
-
-  const dateMap = {};
-  allRecords.forEach(r => {
-    [fv(r,'pubDate'), fv(r,'dateYT'), fv(r,'dateOther')].filter(Boolean).forEach(d => {
-      const dt = new Date(d + 'T00:00:00');
-      if (dt.getFullYear() === calYear && dt.getMonth() === calMonth) {
-        const day = dt.getDate();
-        if (!dateMap[day]) dateMap[day] = [];
-        dateMap[day].push(r);
-      }
-    });
-  });
-
-  const cells = [];
-  for (let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, cur: false });
-  for (let d = 1; d <= daysInMonth; d++)   cells.push({ day: d, cur: true });
-  for (let d = 1; cells.length < 42; d++)  cells.push({ day: d, cur: false });
-
-  const statusCls = {
-    'Published':'pub','Editing and Optimisation in Progress':'edit',
-    'Quality Control':'qc','Ready to publish on other platforms':'ready','Approved for Publishing':'ready'
-  };
-
-  const _calGrid = document.getElementById('cal-grid'); if(_calGrid) _calGrid.innerHTML = cells.map(c => {
-    const isToday = c.cur && c.day === today.getDate() && calYear === today.getFullYear() && calMonth === today.getMonth();
-    const recs = (c.cur && dateMap[c.day]) || [];
-    const show = recs.slice(0, 3);
-    const more = recs.length - 3;
-    return `<div class="cal-cell">
-      <div class="cal-num ${isToday?'today':''} ${!c.cur?'other-month':''}">${c.day}</div>
-      ${show.map(r => `<div class="cal-event ${statusCls[fv(r,'status')]||''}" onclick="openDetail('${r.id}')" title="${fv(r,'name')}">${fv(r,'name')||'—'}</div>`).join('')}
-      ${more > 0 ? `<div class="cal-overflow">+${more} more</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-// ============================================================
-// EDITING PAGE
-// ============================================================
-// ── Active Episode Context ────────────────────────────────────────────────────
-// Lets user "pin" an episode from Pending Editing so all tool pages know
-// which episode they're working on and can save output URLs back to it
-function cmSetActiveEpisode(recId, encodedName){
-  const name = decodeURIComponent(encodedName);
-  localStorage.setItem('cm_active_ep_id',   recId);
-  localStorage.setItem('cm_active_ep_name', name);
-  cmApplyActiveEp();
-  showToast('📌 Active: '+name,'success');
-}
-function cmClearActiveEp(){
-  localStorage.removeItem('cm_active_ep_id');
-  localStorage.removeItem('cm_active_ep_name');
-  cmApplyActiveEp();
-}
-function cmApplyActiveEp(){
-  const id   = localStorage.getItem('cm_active_ep_id')   || '';
-  const name = localStorage.getItem('cm_active_ep_name') || '';
-  ['insta360','intro-editor','add-subtitle','summary-maker'].forEach(p => {
-    const banner = document.getElementById(p+'-ep-banner');
-    const nameEl = document.getElementById(p+'-ep-name');
-    if(banner) banner.style.display = id ? 'flex' : 'none';
-    if(nameEl) nameEl.textContent   = name || '—';
-  });
-}
-document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(cmApplyActiveEp, 800); });
-
-// ── Save output URL to Airtable for active episode ────────────────────────────
-async function cmSaveOutputUrl(fieldKey, url){
-  const recId = localStorage.getItem('cm_active_ep_id');
-  if(!recId){ showToast('No active episode set — go to Pending Editing and click 📌','error'); return; }
-  if(!url){ showToast('Export the video first, then save the URL','error'); return; }
-  try{
-    await atUpdate(recId, {[fieldKey]: url});
-    showToast('URL saved to Airtable ✓','success');
-  }catch(e){ showToast('Airtable save failed: '+e.message,'error'); }
-}
-function i3SaveUrlToAt(){
-  // Prompt user for the hosted URL (e.g. Google Drive link) since blob URLs don't persist
-  const url = prompt('Paste the Google Drive or hosted URL for this reframed video:','');
-  if(url) cmSaveOutputUrl('reframedLink', url);
-}
-function ieSaveUrlToAt(){
-  const url = prompt('Paste the Google Drive or hosted URL for this intro-edited video:','');
-  if(url) cmSaveOutputUrl('introEditLink', url);
-}
-function astSaveUrlToAt(){
-  const url = prompt('Paste the Google Drive or hosted URL for this subtitled video:','');
-  if(url) cmSaveOutputUrl('subtitledLink', url);
-}
-function smSaveUrlToAt(){
-  const url = prompt('Paste the Google Drive or hosted URL for this summary video:','');
-  if(url) cmSaveOutputUrl('summaryLink', url);
-}
-
-
-
-
-
-
-// smRecord state
-  // ── SM blob state ─────────────────────────────────────────────────────────
-  let smBlob = null;
-  let smFilename = '';
-
-
-  // Enable record button when video is loaded
-  function smEnableRecBtn(){
-    const btn = g('sm-rec-btn');
-    if(btn){ btn.disabled=false; }
-    // Also keep legacy gen btn in sync
-    const gb = g('sm-gen-btn');
-    if(gb){ gb.disabled=false; }
-  }
-
-
-  async function smRecord(){
-    const vid = g('sm-video');
-    if(!smLoaded){ showToast('Upload a video first','error'); return; }
-    if(smRecording){ showToast('Already recording — please wait','error'); return; }
-
-    const recBtn = g('sm-rec-btn');
-    const dlBtn  = g('sm-dl-btn');
-    recBtn.disabled = true;
-    recBtn.textContent = '⏸ Recording…';
-    if(dlBtn) dlBtn.style.display = 'none';
-    g('sm-dl-ready').style.display  = 'none';
-    g('sm-progress-wrap').style.display = 'block';
-    smRecording = true;
-    smBlob = null;
-
-    const fmtS = s => { const m=Math.floor(s/60),sc=Math.floor(s%60); return m+':'+(sc<10?'0':'')+sc; };
-    const setProg = (pct,msg) => {
-      g('sm-progress-bar').style.width = Math.min(100,pct)+'%';
-      g('sm-progress-label').textContent = msg;
-    };
-
-    const mime = ['video/mp4;codecs=avc1','video/mp4;codecs=h264','video/mp4',
-      'video/webm;codecs=vp9,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
-    const ext  = mime.startsWith('video/mp4') ? '.mp4' : '.webm';
-    const dur  = vid.duration;
-    const bitrate = Math.max(Math.min(Math.floor(500*1024*1024*8/dur),8000000),2000000);
-
-    // Build canvas stream + audio
-    const cvs    = g('sm-preview');
-    cvs.width = SM_W; cvs.height = SM_H; // ensure size before captureStream
-    const stream = cvs.captureStream(30);
-    try{
-      vid.muted = false; vid.volume = 1;
-      const vs = vid.captureStream ? vid.captureStream(30) : null;
-      if(vs) vs.getAudioTracks().forEach(t => stream.addTrack(t));
-    }catch(e){}
-
-    const recorder = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:bitrate });
-    const chunks = [];
-    recorder.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
-
-    recorder.onstop = () => {
-      smRecording = false;
-      if(!chunks.length){ showToast('Nothing was recorded — try again','error'); recBtn.disabled=false; recBtn.textContent='⏹ Record Video'; g('sm-progress-wrap').style.display='none'; return; }
-      smBlob = new Blob(chunks, { type:mime });
-      const day = g('sm-day').value || '0000';
-      const {epNum:_smEp}=getActiveEpInfo(); const _smDay=day||_smEp||'0000'; smFilename='Ep'+_smDay+'_Summary'+ext;
-      smLastBlob = smBlob;
-      smLastFilename = smFilename;
-      vid.muted = true;
-      vid.pause();
-
-      setProg(100, '✓ Done — ' + (smBlob.size/1024/1024).toFixed(1) + ' MB — downloading…');
-
-      // Trigger download immediately
-      smDownloadNow();
-
-      // Show UI
-      g('sm-progress-wrap').style.display = 'none';
-      g('sm-dl-ready').style.display = 'block';
-      g('sm-dl-size').textContent = (smBlob.size/1024/1024).toFixed(1)+' MB · '+smFilename;
-      if(dlBtn){ dlBtn.style.display='block'; dlBtn.textContent='⬇ Download MP4'; }
-      recBtn.disabled = false;
-      recBtn.textContent = '⏹ Re-record';
-
-      const smSaveBtn = document.getElementById('summary-maker-save-url-btn');
-      if(smSaveBtn && localStorage.getItem('cm_active_ep_id')) smSaveBtn.style.display = 'block';
-      showToast('Summary downloaded ✓', 'success');
-    };
-
-    // Step 1: seek video to beginning
-    vid.pause();
-    vid.currentTime = 0;
-    setProg(0, 'Seeking to start…');
-
-    // Wait for seeked (with fallback)
-    await new Promise(resolve => {
-      const onSeeked = () => { vid.removeEventListener('seeked', onSeeked); resolve(); };
-      vid.addEventListener('seeked', onSeeked);
-      setTimeout(resolve, 500); // fallback: if already at 0, seeked may not fire
-    });
-
-    // Step 2: start recorder and play
-    recorder.start(100);
-    const recStart = Date.now();
-    vid.play();
-
-    // Step 3: draw canvas continuously + track progress
-    // Use 'ended' event to stop — more reliable than polling paused
-    const onEnded = () => {
-      vid.removeEventListener('ended', onEnded);
-      clearInterval(progressInterval);
-      recorder.stop();
-    };
-    vid.addEventListener('ended', onEnded);
-
-    // Also stop via interval safety net (in case ended doesn't fire)
-    const progressInterval = setInterval(() => {
-      const el  = vid.currentTime;
-      const pct = Math.min(99, el/dur*100);
-      const ws  = (Date.now()-recStart)/1000;
-      const eta = pct>5 ? Math.max(0,(ws/pct*100)-ws) : dur;
-      setProg(pct, 'Recording '+Math.round(pct)+'%  '+fmtS(el)+' / '+fmtS(dur)+
-        (eta>2 ? '  (∼'+fmtS(eta)+' left)' : '  · almost done'));
-
-      // Draw current frame to canvas
-      smDraw();
-
-      // Safety stop if video is done
-      if(vid.ended || (pct > 98 && vid.paused)){
-        clearInterval(progressInterval);
-        vid.removeEventListener('ended', onEnded);
-        if(recorder.state === 'recording') recorder.stop();
-      }
-    }, 250); // check 4x per second
-  }
-
-
-
-  // ── Download the recorded blob ─────────────────────────────────────────────
-  function smDownloadNow(){
-    if(!smBlob){ showToast('Record the video first','error'); return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(smBlob);
-    a.download = smFilename || 'Summary.mp4';
-    a.click();
-    showToast('Download started ✓', 'success');
-  }
-
-  // ── Re-record: clear blob, reset UI ───────────────────────────────────────
-  function smReRecord(){
-    smBlob = null; smLastBlob = null;
-    g('sm-dl-ready').style.display = 'none';
-    const dlBtn = g('sm-dl-btn');
-    if(dlBtn) dlBtn.style.display = 'none';
-    const recBtn = g('sm-rec-btn');
-    if(recBtn){ recBtn.disabled=false; recBtn.textContent='⏺ Record Video'; }
-    showToast('Ready to re-record', 'success');
-  }
-
 
 </script>
 </body>
