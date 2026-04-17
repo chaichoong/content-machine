@@ -706,195 +706,154 @@
   <!-- VIDEO EDITOR — WebGL 360° Reframer -->
   <div class="page" id="page-insta360">
     <div class="page-header">
-      <div class="page-title"><span class="emoji">🌐</span> Insta360 Reframe</div>
+      <div class="page-title"><span class="emoji">📷</span> Insta360 Studio SOP</div>
+    </div>
 
-    <!-- ⚠️ Honest scope notice — always visible -->
-    <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:14px 16px;margin-bottom:16px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="font-size:20px;line-height:1;margin-top:1px">⚠️</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">What this tool can and cannot do vs Insta360 Studio</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:11px;line-height:1.7">
-            <div>
-              <div style="font-weight:700;color:var(--green);margin-bottom:3px">✅ What it CAN do</div>
-              <div style="color:var(--muted)">Drag canvas to pan/tilt the 360° view<br>
-              MEGA / ULTRA / DEWARP / LINEAR presets<br>
-              Pan · Tilt · Roll · FOV sliders<br>
-              Manual keyframe placement (+button)<br>
-              Click yellow dots to jump to keyframes<br>
-              Linear interpolation between keyframes<br>
-              Works on exported flat MP4 files</div>
-            </div>
-            <div>
-              <div style="font-weight:700;color:var(--red);margin-bottom:3px">❌ What it CANNOT do</div>
-              <div style="color:var(--muted)"><strong style="color:var(--text)">No AI subject tracking</strong> — Insta360 Studio's DeepTrack is a proprietary GPU model that auto-centres Kevin on every frame. This requires a native app with GPU access. A browser cannot do this at video speed.<br><br>
-              <strong style="color:var(--text)">No raw .insv files</strong> — browser can't decode Insta360's format. Only exported MP4 works.<br><br>
-              <strong style="color:var(--text)">No Bezier curves</strong> — Studio interpolates per-frame with smooth curves. This tool uses linear interpolation at 30fps.<br><br>
-              <strong style="color:var(--text)">No ProRes output</strong> — browser export caps at ~8 Mbps. Studio can do 200+ Mbps ProRes.</div>
-            </div>
+    <!-- Step 0 banner -->
+    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.4);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:4px">📷 Step 0 — Do this before clicking 🤖 AI in Pending Editing</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7">This is the <strong>only desktop step</strong>. Export from Insta360 Studio → upload to Google Drive → paste link into Airtable <strong>Optimized Video Link</strong> → change status to <strong>Editing and Optimisation in Progress</strong> → click 🤖 AI. The Content Machine handles everything after that.</div>
+    </div>
+
+    <!-- Two column layout -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <!-- FULL VIDEO -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);font-family:'Syne',sans-serif;margin-bottom:4px">🎥 Full Episode — Long Form</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">16:9 landscape · 20 Mbps · Two .insv files</div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Import</strong> — yellow folder → select both <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">VID_029.insv</code> + <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">VID_030.insv</code></div>
           </div>
-          <div style="margin-top:10px;padding:8px 12px;background:rgba(234,179,8,.1);border-radius:6px;font-size:11px;color:#fbbf24;font-weight:700">
-            👉 Recommendation: Use <strong>Insta360 Studio</strong> (free at insta360.com/download) for the reframe step — it auto-centres Kevin properly. Export a flat MP4, then bring it here for the rest of the workflow.
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Aspect ratio</strong> → confirm <strong>16:9</strong> (bottom-right of preview)</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+            <div style="font-size:12px;color:var(--text)"><strong>View Angle Gear</strong> (∨ chevron below preview) → select <strong style="color:#f78b31">DEWARP</strong> (yellow) — always this, never MEGA/ULTRA/LINEAR</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Default framing</strong> — Pan <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">-210°</code> · Tilt <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">0.0°</code> · FOV <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">100°</code> · Zoom <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">0.40</code> — usually leave as-is</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Add 2–3 keyframes</strong> (+ button in toolbar) — near start, middle, end of timeline yellow dots lock framing</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Play through</strong> — verify Kevin stays centred. If he drifts, drag that keyframe and adjust Pan</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,.2);color:var(--green);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">7</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Export</strong> (yellow button top-right)</div>
           </div>
         </div>
+
+        <!-- Export settings -->
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px">
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Export Settings</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;font-family:'DM Mono',monospace">
+            <div style="color:var(--muted)">Resolution</div><div style="color:var(--text)">1920 × 1080 (Full HD)</div>
+            <div style="color:var(--muted)">Bitrate</div><div style="color:var(--text)">20 Mbps</div>
+            <div style="color:var(--muted)">Frame rate</div><div style="color:var(--text)">24.00 fps</div>
+            <div style="color:var(--muted)">Encoding</div><div style="color:var(--text)">H.264</div>
+            <div style="color:var(--muted)">Format</div><div style="color:var(--text)">MP4</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">File name: <code style="color:var(--cyan)">Ep[NUM]_FullVideo_[Topic].mp4</code></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">⏱ ~5 min active · 3–5 min export (unattended)</div>
+      </div>
+
+      <!-- SUMMARY VIDEO -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);font-family:'Syne',sans-serif;margin-bottom:4px">📹 Summary Clip — Short Form</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">9:16 portrait · 15 Mbps · ~37 seconds</div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(249,115,22,.2);color:#fb923c;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Import</strong> <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">VID_030.insv</code> (the shorter clip, ~37s)</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(249,115,22,.2);color:#fb923c;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Aspect ratio</strong> → switch to <strong>9:16</strong> portrait (TikTok / Reels / Shorts)</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(249,115,22,.2);color:#fb923c;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+            <div style="font-size:12px;color:var(--text)"><strong>View Angle Gear</strong> → <strong style="color:#f78b31">DEWARP</strong> · Pan <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">-195°</code> · Tilt <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">-32°</code> · FOV <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">69.9°</code> · Zoom <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">0.46</code></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(249,115,22,.2);color:#fb923c;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Trim</strong> — drag left handle to clean start, right handle to ~37s (orange × marker)</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(249,115,22,.2);color:#fb923c;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Add 2 keyframes</strong> — start + end of trimmed clip</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,.2);color:var(--green);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>
+            <div style="font-size:12px;color:var(--text)"><strong>Export</strong></div>
+          </div>
+        </div>
+
+        <!-- Export settings -->
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px">
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Export Settings</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;font-family:'DM Mono',monospace">
+            <div style="color:var(--muted)">Resolution</div><div style="color:var(--text)">1080 × 1920 (portrait)</div>
+            <div style="color:var(--muted)">Bitrate</div><div style="color:var(--text)">15 Mbps</div>
+            <div style="color:var(--muted)">Frame rate</div><div style="color:var(--text)">24.00 fps</div>
+            <div style="color:var(--muted)">Encoding</div><div style="color:var(--text)">H.264</div>
+            <div style="color:var(--muted)">Format</div><div style="color:var(--text)">MP4</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">File name: <code style="color:var(--cyan)">Ep[NUM]_Summary_[Topic].mp4</code></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">⏱ ~3 min active · 1–2 min export (unattended)</div>
       </div>
     </div>
 
-      <!-- Active Episode Banner -->
-      <div id="insta360-ep-banner" style="display:none;background:rgba(255,107,53,.08);border:1px solid rgba(255,107,53,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px">Active Episode</div>
-          <div id="insta360-ep-name" style="font-size:13px;font-weight:700;color:var(--text)">—</div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button id="insta360-save-url-btn" onclick="i3SaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;white-space:nowrap">
-            💾 Save URL to Airtable
-          </button>
-          <button onclick="cmClearActiveEp()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'Syne',sans-serif">✕</button>
-        </div>
+    <!-- After Insta360 flow -->
+    <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:14px 16px;margin-top:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✅ After export — the AI handles everything else</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text)">
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">1. Upload to Drive</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">2. Paste link in Airtable</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">3. Status → Editing in Progress</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:rgba(99,102,241,.2);border-radius:6px;padding:4px 8px;color:#818cf8;font-weight:700">4. Click 🤖 AI</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">Intro Editor</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">Subtitles</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">Thumbnail</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:var(--surface2);border-radius:6px;padding:4px 8px">Copywriting</span>
+        <span style="color:var(--muted)">→</span>
+        <span style="background:rgba(34,197,94,.2);border-radius:6px;padding:4px 8px;color:var(--green);font-weight:700">✅ Done</span>
       </div>
-
     </div>
 
-    <div style="display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start">
-
-      <!-- LEFT: Controls -->
-      <div>
-
-        <!-- Upload -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">📂 Upload 360° Video</div>
-          <div id="i3-drop" onclick="document.getElementById('i3-file').click()"
-            style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s">
-            <div style="font-size:22px;margin-bottom:4px">🌐</div>
-            <div id="i3-drop-label" style="font-size:11px;color:var(--muted)">Drop raw 360° video or click to browse</div>
-            <div id="i3-file-info" style="font-size:10px;color:var(--cyan);margin-top:4px;display:none;font-family:'DM Mono',monospace;line-height:1.5"></div>
-          </div>
-          <input type="file" id="i3-file" accept="video/*" style="display:none">
-          <video id="i3-vid" style="display:none" crossorigin="anonymous" playsinline preload="auto"></video>
-        </div>
-
-        <!-- View Angle Gear — matches Insta360 Studio layout -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700">⚙️ View Angle Gear</div>
-            <button onclick="i3ResetAngle()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:5px;cursor:pointer;font-size:10px;font-family:'Syne',sans-serif">↺ Reset</button>
-          </div>
-
-          <!-- Lens mode presets (matches Insta360 Studio) -->
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:12px">
-            <button onclick="i3SetMode('mega')" id="i3-mode-mega" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">MEGA</button>
-            <button onclick="i3SetMode('ultra')" id="i3-mode-ultra" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--border);background:var(--accent);color:white">ULTRA</button>
-            <button onclick="i3SetMode('dewarp')" id="i3-mode-dewarp" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">DEWARP</button>
-            <button onclick="i3SetMode('linear')" id="i3-mode-linear" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">LINEAR</button>
-          </div>
-
-          <!-- Pan slider -->
-          <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-              <label style="font-size:11px;color:var(--muted)">⟺ Pan (left/right)</label>
-              <span id="i3-pan-val" style="font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700">0.0°</span>
-            </div>
-            <input type="range" id="i3-pan" min="-360" max="360" value="0" step="0.1"
-              style="width:100%;accent-color:var(--accent)" oninput="i3SliderChange()">
-          </div>
-
-          <!-- Tilt slider -->
-          <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-              <label style="font-size:11px;color:var(--muted)">⟸ Tilt (up/down)</label>
-              <span id="i3-tilt-val" style="font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700">0.0°</span>
-            </div>
-            <input type="range" id="i3-tilt" min="-90" max="90" value="0" step="0.1"
-              style="width:100%;accent-color:var(--accent)" oninput="i3SliderChange()">
-          </div>
-
-          <!-- Roll slider -->
-          <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-              <label style="font-size:11px;color:var(--muted)">↻ Roll</label>
-              <span id="i3-roll-val" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">0.0°</span>
-            </div>
-            <input type="range" id="i3-roll" min="-180" max="180" value="0" step="0.1"
-              style="width:100%;accent-color:var(--muted)" oninput="i3SliderChange()">
-          </div>
-
-          <!-- FOV slider -->
-          <div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-              <label style="font-size:11px;color:var(--muted)">◉ FOV</label>
-              <span id="i3-fov-val" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">90.0°</span>
-            </div>
-            <input type="range" id="i3-fov" min="30" max="150" value="90" step="0.5"
-              style="width:100%;accent-color:var(--muted)" oninput="i3SliderChange()">
-          </div>
-        </div>
-
-        <!-- Keyframe controls -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:10px">🔑 Keyframes</div>
-          <button id="i3-add-kf-btn" onclick="i3AddKeyframe()" disabled
-            style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;margin-bottom:8px">
-            + Add Keyframe at Current Time
-          </button>
-          <div id="i3-kf-list" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;max-height:120px;overflow-y:auto;line-height:2"></div>
-          <button onclick="i3ClearKfs()" style="margin-top:6px;width:100%;background:none;border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:6px;padding:6px;font-size:11px;cursor:pointer;font-family:'Syne',sans-serif;display:none" id="i3-clear-kfs-btn">✕ Clear All Keyframes</button>
-        </div>
-
-        <!-- Playback + Export -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-          <button id="i3-play-btn" onclick="i3PlayPause()" disabled class="btn btn-secondary" style="font-size:12px;padding:9px">▶ Play</button>
-          <button onclick="i3Stop()" id="i3-stop-btn" class="btn btn-secondary" style="display:none;font-size:12px;padding:9px;border-color:rgba(239,68,68,.4);color:var(--red)">⏹ Stop</button>
-        </div>
-        <button id="i3-export-btn" onclick="i3Export()" disabled class="btn btn-primary"
-          style="width:100%;font-size:13px;padding:12px;margin-bottom:10px">
-          ⬇ Export Reframed MP4
-        </button>
-        <div id="i3-prog-wrap" style="display:none;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:5px;font-family:'DM Mono',monospace" id="i3-prog-label">Recording…</div>
-          <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden">
-            <div id="i3-prog-fill" style="height:100%;background:var(--accent);width:0%;transition:width .2s;border-radius:4px"></div>
-          </div>
-        </div>
-        <div id="i3-dl-ready" style="display:none;padding:10px 14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span id="i3-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Mono',monospace;font-weight:700"></span>
-          <button class="btn btn-secondary btn-sm" onclick="i3DlAgain()">↓ Again</button>
-        </div>
-
+    <!-- Key rules -->
+    <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 16px;margin-top:12px">
+      <div style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:6px">⚠️ Rules — never break these</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:var(--text)">
+        <div>• Always use <strong>DEWARP</strong> — never MEGA, ULTRA, or LINEAR</div>
+        <div>• Full video = <strong>16:9</strong> landscape · Summary = <strong>9:16</strong> portrait</div>
+        <div>• Always add <strong>at least 2 keyframes</strong> — start and end</div>
+        <div>• Export Full at <strong>20 Mbps</strong> · Summary at <strong>15 Mbps</strong></div>
+        <div>• File names must include <strong>Ep number</strong> + topic</div>
+        <div>• LFMD clips come from the same file as the full video</div>
       </div>
-
-      <!-- RIGHT: Canvas + timeline -->
-      <div style="position:sticky;top:80px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Live View — drag to reframe</div>
-          <div id="i3-phase" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)"></div>
-        </div>
-
-        <!-- Canvas — drag to pan/tilt -->
-        <canvas id="i3-canvas"
-          style="width:100%;display:block;border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none;background:#111;aspect-ratio:16/9;cursor:grab"
-          onmousedown="i3DragStart(event)" onmousemove="i3DragMove(event)"
-          onmouseup="i3DragEnd()" onmouseleave="i3DragEnd()">
-        </canvas>
-
-        <!-- Timeline with keyframe dots -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--border);border-radius:0 0 10px 10px;padding:10px 12px">
-          <div style="position:relative;height:8px;background:var(--border);border-radius:4px;cursor:pointer;margin-bottom:8px" id="i3-scrubber" onclick="i3ScrubClick(event)">
-            <div id="i3-scrub-fill" style="height:100%;background:var(--blue);border-radius:4px;width:0%;pointer-events:none"></div>
-            <!-- Keyframe markers rendered via JS -->
-            <div id="i3-kf-markers"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span id="i3-time-cur" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">0:00</span>
-            <span id="i3-time-dur" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">0:00</span>
-          </div>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);text-align:center">
-          Drag canvas to reframe · use sliders for precision · click + to save keyframe
-        </div>
-      </div>
-
     </div>
+
   </div>
 
   <div class="page" id="page-intro-editor">
@@ -1425,7 +1384,7 @@
     </div>
     <div class="form-group"><label>Raw File Link</label><input type="url" id="dr-rawlink" placeholder="https://drive.google.com/..."></div>
     <div class="form-group"><label>Optimized Video Link <span style="font-size:10px;color:var(--muted);font-weight:400">(paste Google Drive/Dropbox link — no file upload needed)</span></label><input type="url" id="dr-optlink" placeholder="https://drive.google.com/file/d/..."></div>
-    <div class="form-group" style="background:rgba(255,107,53,.06);border:1px solid rgba(255,107,53,.25);border-radius:8px;padding:10px 12px"><label style="color:var(--accent)">🎬 Video Edited URL <span style="font-size:10px;color:var(--muted);font-weight:400">(paste Google Drive link of final edited video here)</span></label><input type="url" id="dr-videoedited" placeholder="https://drive.google.com/file/d/..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;outline:none;margin-top:4px"></div>
+    
     <div class="form-group">
       <label>Thumbnail</label>
       <div class="thumb-upload">
@@ -1485,7 +1444,6 @@ const FIELD_NAMES = {
   videoTitle:      'Video Title',
   rawLink:         'Raw File Link',
   optLink:         'Optimized Video Link',
-  videoEditedUrl:  'Video Edited URL',
   pubDate:         'Target Publish Date',
   dateYT:          'Date Published (YT)',
   dateOther:       'Date Published (Other)',
@@ -2386,7 +2344,7 @@ async function saveDrawer() {
     pubDate:     document.getElementById('dr-pubdate2').value,
     rawLink:     document.getElementById('dr-rawlink').value,
     optLink:         document.getElementById('dr-optlink').value,
-    videoEditedUrl:  document.getElementById('dr-videoedited')?.value || '',
+
     description: document.getElementById('dr-description').value,
   };
 
@@ -7893,8 +7851,8 @@ window.wfIEContinue = function() {
   if(!url){ showToast('Paste the Google Drive URL first','error'); return; }
   if(recId){
     const rec = allRecords.find(r=>r.id===recId);
-    if(rec) (rec.fields||rec).videoEditedUrl = url;
-    atUpdate(recId, { videoEditedUrl: url });
+    if(rec) (rec.fields||rec).optLink = url;
+    atUpdate(recId, { optLink: url });
     showToast('Video Edited URL saved ✓','success');
   }
   if(guide) guide.remove();
@@ -8159,8 +8117,8 @@ window.wfSaveVideoUrl = function(recId) {
   if (!url) { showToast('Paste a Google Drive URL first', 'error'); return; }
 
   const rec = allRecords.find(r => r.id === recId);
-  if (rec) { (rec.fields||rec).videoEditedUrl = url; }
-  atUpdate(recId, { videoEditedUrl: url });
+  if (rec) { (rec.fields||rec).optLink = url; }
+  atUpdate(recId, { optLink: url });
   showToast('Video Edited URL saved to Airtable ✓', 'success');
 
   // Check transcript then go to subtitle step
