@@ -1644,20 +1644,37 @@ function appendYtLink(recId) {
   const rec = allRecords.find(r => r.id === recId);
   const f   = rec ? (rec.fields || rec) : {};
   const type = f.type || '';
-  const CTA = '\n\nWatch full YT video here 👉 ' + url;
   const KEYS = ['copy_fb_post','copy_insta_post','copy_li','copy_threads','copy_x','copy_tiktok','copy_yt_reels'];
 
   let updated = 0;
+  const CTA_LINE = 'Watch full YT video here 👉 ' + url;
+
   KEYS.forEach(key => {
     const el = document.getElementById('cf-' + recId + '-' + key);
     if (!el) return;
     const current = el.value;
     if (!current.trim()) return; // skip empty fields
-    // Remove previous CTA if present
-    const ctaIdx = current.indexOf('\n\nWatch full YT video here 👉');
-    const base = ctaIdx > -1 ? current.slice(0, ctaIdx) : current;
-    el.value = base + CTA;
-    // Save to AT
+
+    // Strip any previously inserted CTA line first
+    let clean = current.replace(/\n*Watch full YT video here 👉 \S+\n*/g, '\n').trimEnd();
+
+    // Find where hashtags start — look for a line that begins with #
+    const lines = clean.split('\n');
+    let hashLineIdx = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim().startsWith('#')) { hashLineIdx = i; break; }
+    }
+
+    if (hashLineIdx > -1) {
+      // Insert CTA between description and hashtags
+      const descLines = lines.slice(0, hashLineIdx);
+      const hashLines = lines.slice(hashLineIdx);
+      el.value = descLines.join('\n').trimEnd() + '\n\n' + CTA_LINE + '\n\n' + hashLines.join('\n').trim();
+    } else {
+      // No hashtags found — append at end
+      el.value = clean + '\n\n' + CTA_LINE;
+    }
+
     saveCopyField(recId, key, el.value);
     updated++;
   });
