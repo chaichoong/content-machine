@@ -1650,6 +1650,23 @@ function renderPage(page) {
   }
 }
 
+
+// ── Shared episode number + content type helper ───────────────────────────
+function getActiveEpInfo() {
+  const recId = localStorage.getItem('cm_active_ep_id');
+  const rec   = recId ? allRecords.find(r => r.id === recId) : null;
+  const name  = rec ? (fv(rec,'name') || '') : '';
+  const type  = rec ? (fv(rec,'type') || '') : '';
+  const m     = name.match(/(?:ep|episode)[\s#]*(\d+)/i);
+  const epNum = m ? m[1] : '';
+  // Short type slug
+  const typeSlug = type === 'Long Form Video' ? 'LongForm'
+                 : type === 'Learnings From My Diary' ? 'LFMD'
+                 : type === 'Short Form Video' ? 'Summary'
+                 : type.replace(/\s+/g,'');
+  return { epNum, typeSlug, name, type };
+}
+
 function renderCurrentPage() {
   const active = document.querySelector('.page.active');
   if (!active) return;
@@ -4889,7 +4906,7 @@ function renderAiUsagePanel() {
       astRecorder=null; astRecPaused=false;
       astBlob=new Blob(cks,{type:mime});
       const url=URL.createObjectURL(astBlob);
-      const a=document.createElement('a');a.href=url;a.download='kevin_subtitled'+ext;a.click();
+      const a=document.createElement('a');a.href=url;const {epNum:_astEp,typeSlug:_astType}=getActiveEpInfo(); a.download=((_astEp?'Ep'+_astEp+'_':'')+'Subtitled'+(_astType?'_'+_astType:'')+ext);a.click();
       vid.muted=true;
       g('ast-prog-wrap').style.display='none';
       g('ast-export-btn').disabled=false;g('ast-export-btn').textContent='⬇ Download MP4 with Subtitles';
@@ -5339,7 +5356,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
     rec.onstop=()=>{
       iePhase='idle';
       ieLastBlob=new Blob(chunks,{type:mime});
-      const a=document.createElement('a');a.href=URL.createObjectURL(ieLastBlob);a.download='kevin_with_intro'+ext;a.click();
+      const a=document.createElement('a');a.href=URL.createObjectURL(ieLastBlob);const {epNum:_ieEp,typeSlug:_ieType}=getActiveEpInfo(); a.download=((_ieEp?'Ep'+_ieEp+'_':'')+'IntroEdit'+(_ieType?'_'+_ieType:'')+ext);a.click();
       intro.pause(); main.pause();
       g('ie-prog-wrap').style.display='none';
       g('ie-export-btn').disabled=false;g('ie-export-btn').textContent='🎬 Export Combined Video';
@@ -5417,7 +5434,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
 
   function ieDlAgain(){
     if(!ieLastBlob) return;
-    const a=document.createElement('a');a.href=URL.createObjectURL(ieLastBlob);a.download='kevin_with_intro.mp4';a.click();
+    const a=document.createElement('a');a.href=URL.createObjectURL(ieLastBlob);const {epNum:_ieEp2,typeSlug:_ieT2}=getActiveEpInfo(); a.download=((_ieEp2?'Ep'+_ieEp2+'_':'')+'IntroEdit'+(_ieT2?'_'+_ieT2:'')+'.mp4');a.click();
     showToast('Download started ✓','success');
   }
 
@@ -6209,7 +6226,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
     recorder.onstop=()=>{
       lfmdLastBlob=new Blob(chunks,{type:mime});
       const sizeMB=(lfmdLastBlob.size/1024/1024).toFixed(1);
-      const day=g('lfmd-day').value||'0000';
+      const {epNum:_lfEp}=getActiveEpInfo(); const day=g('lfmd-day').value||_lfEp||'0000';
       const filename='Ep'+day+'_LFMD'+ext;
       const url=URL.createObjectURL(lfmdLastBlob);
       const a=document.createElement('a');a.href=url;a.download=filename;a.click();
@@ -7372,7 +7389,7 @@ async function wcFinalize(muxer, vEnc, target) {
     const cvs=g('th-canvas');
     const a=document.createElement('a');
     const day=g('th-day')?.value||'';
-    a.download=`Ep${day}_Thumbnail.png`;
+    const {epNum:_thEp,typeSlug:_thType}=getActiveEpInfo(); const _thDay=day||_thEp||''; a.download=(_thDay?'Ep'+_thDay+'_':'')+'Thumbnail'+(_thType?'_'+_thType:'')+'.png';
     a.href=cvs.toDataURL('image/png');
     a.click();
     showToast('Thumbnail downloaded ✓','success');
@@ -9010,7 +9027,7 @@ function smSaveUrlToAt(){
       if(!chunks.length){ showToast('Nothing was recorded — try again','error'); recBtn.disabled=false; recBtn.textContent='⏹ Record Video'; g('sm-progress-wrap').style.display='none'; return; }
       smBlob = new Blob(chunks, { type:mime });
       const day = g('sm-day').value || '0000';
-      smFilename = 'Ep'+day+'_Summary'+ext;
+      const {epNum:_smEp}=getActiveEpInfo(); const _smDay=day||_smEp||'0000'; smFilename='Ep'+_smDay+'_Summary'+ext;
       smLastBlob = smBlob;
       smLastFilename = smFilename;
       vid.muted = true;
