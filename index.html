@@ -8045,9 +8045,37 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
     lfmdDraw(); // blank preview
   });
 
+  // ── Set clip range from external caller (e.g. AI detect) ─────────────────
+  // Writes to the IIFE-local lfmdStartTime / lfmdEndTime, redraws the UI,
+  // and updates the scrubber. The recording functions will then read these
+  // values correctly when Generate is clicked.
+  function lfmdSetClipRange(startSec, endSec){
+    const vid = g('lfmd-video');
+    const dur = vid?.duration || 0;
+    let s = Math.max(0, Number(startSec) || 0);
+    let e = Math.max(s + 1, Number(endSec) || (s + 60));
+    if (dur > 0) {
+      if (s > dur) s = dur - 30;
+      if (s < 0)   s = 0;
+      if (e > dur) e = dur;
+    }
+    lfmdStartTime = s;
+    lfmdEndTime   = e;
+    const sd = g('lfmd-start-display'); if (sd) sd.textContent = lfmdFmt(s);
+    const ed = g('lfmd-end-display');   if (ed) ed.textContent = lfmdFmt(e);
+    lfmdUpdateClipInfo();
+    lfmdUpdScrubber();
+    // Seek the video so user can preview the start frame visually
+    if (vid && dur > 0) {
+      try { vid.currentTime = s; } catch(err) {}
+    }
+    return { start: s, end: e };
+  }
+
   window.lfmdRedraw=lfmdRedraw;
   window.lfmdSetStart=lfmdSetStart;
   window.lfmdSetEnd=lfmdSetEnd;
+  window.lfmdSetClipRange=lfmdSetClipRange;
   window.lfmdUseFullVideo=lfmdUseFullVideo;
   window.lfmdPlayPause=lfmdPlayPause;
   window.lfmdPreviewClip=lfmdPreviewClip;
@@ -8210,88 +8238,147 @@ async function lfmdAiDetect(){
   const activeId = localStorage.getItem('cm_active_ep_id');
   const resetBtn = cmAiBtn('lfmd-ai-btn','✨ AI Detect','✨ Scanning…');
   const statusEl = document.getElementById('lfmd-ai-status');
-  statusEl.style.display='block'; statusEl.textContent='Reading transcript…'; statusEl.style.color='var(--muted)';
-  try{
-    const rec = activeId ? allRecords?.find(r=>r.id===activeId) : null;
-    if(!rec) throw new Error('Set an active episode first (go to 📌 Pending Editing → click 📌)');
-    const transcript = fv(rec,'description')||'';
-    if(!transcript) throw new Error('No transcript for this episode — transcribe it first in 💬 Add Subtitle');
-    const episodeName = fv(rec,'name')||'';
+  const setStatus = (msg, color) => {
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    statusEl.textContent = msg;
+    statusEl.style.color = color || 'var(--muted)';
+  };
 
-    // Get video duration if available so AI knows the bounds
+  setStatus('Reading transcript…');
+
+  try {
+    // ── Pre-flight checks ──────────────────────────────────────────────────
+    if (!localStorage.getItem('cm_ai_key')) {
+      throw new Error('Anthropic API key not set — click ✨ Set AI Key in the sidebar');
+    }
+
+    const rec = activeId ? (allRecords || []).find(r => r.id === activeId) : null;
+    if (!rec) {
+      throw new Error('No active episode set — go to 📌 Pending Editing → click 📌 next to a record');
+    }
+    const transcript = (fv(rec, 'description') || '').trim();
+    if (!transcript) {
+      throw new Error('No transcript on this episode — transcribe it first in 💬 Add Subtitle');
+    }
+    if (transcript.length < 100) {
+      throw new Error('Transcript too short (' + transcript.length + ' chars) — needs a full episode transcript');
+    }
+
+    const episodeName = fv(rec, 'name') || 'Untitled';
     const vid = document.getElementById('lfmd-video');
-    const videoDur = (vid && vid.duration) ? Math.floor(vid.duration) : null;
+    const videoDur = (vid && !isNaN(vid.duration) && vid.duration > 0) ? Math.floor(vid.duration) : null;
 
-    const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-    const speakingPace = 130; // words per minute average for Kevin
+    if (!videoDur) {
+      // Without video duration we can still detect via transcript, but warn the user
+      console.warn('[lfmd-ai-detect] No video loaded yet — clip times will be estimated from speaking pace');
+    }
+
+    // Strip any existing timestamp markers from the transcript so the AI sees clean prose
+    // Format from Whisper save: "00:00:00:09 - 00:00:02:07 text..."
+    const cleanedTranscript = transcript
+      .replace(/^\s*\d{1,2}:\d{2}:\d{2}:\d{2}\s*-\s*\d{1,2}:\d{2}:\d{2}:\d{2}\s*/gm, '')
+      .replace(/\n{2,}/g, '\n')
+      .trim();
+
+    const wordCount = cleanedTranscript.split(/\s+/).filter(Boolean).length;
+    const speakingPace = 130; // wpm — Kevin's average
     const estDurFromWords = Math.round(wordCount / speakingPace * 60);
 
-    const response = await cmAiCall(
-      KEVIN_CONTEXT,
-`Episode transcript for "${episodeName}":
+    setStatus('Calling AI to locate LFMD section…', 'var(--cyan)');
 
-${transcript}
+    const prompt = 'Episode transcript for "' + episodeName + '":\n\n' +
+      cleanedTranscript + '\n\n' +
+      'TASK: Find the start of Kevin\'s "Learnings From My Diary" segment in this transcript.\n\n' +
+      'PRIMARY PHRASE (search case-insensitive, allow minor variations):\n' +
+      '- "So learnings from my diary today"\n' +
+      '- "Learnings from my diary today"\n' +
+      '- "Learnings from my diary"\n' +
+      '- "Learning from my diary"\n\n' +
+      'If you find the phrase, set startSec to the moment Kevin BEGINS saying it.\n\n' +
+      'If the phrase is not present, locate the closing reflection where Kevin pivots to the day\'s lesson. Cues:\n' +
+      '- "what I learned today" / "today\'s lesson"\n' +
+      '- "so ultimately" / "the takeaway"\n' +
+      '- "if there\'s one thing" / "what does this mean"\n\n' +
+      'CLIP RULES:\n' +
+      '- Min duration: 30s, max: 80s\n' +
+      '- End at a natural sentence break\n' +
+      (videoDur
+        ? '- Video total duration is ' + videoDur + 's — startSec and endSec MUST be within bounds.\n'
+        : '- Estimate using ~' + speakingPace + ' wpm (transcript ≈ ' + wordCount + ' words ≈ ' + estDurFromWords + 's).\n') +
+      '\nReturn ONLY this JSON, no other text, no markdown fences:\n' +
+      '{"startSec":120,"endSec":180,"excerpt":"first 8-12 words","matchType":"exact","confidence":"high"}';
 
-TASK: Find the exact start of Kevin's "Learnings From My Diary" segment.
+    const response = await cmAiCall(KEVIN_CONTEXT, prompt, 400);
+    console.log('[lfmd-ai-detect] raw response:', response);
 
-PRIMARY PHRASE TO LOCATE (exact or near-exact):
-- "So learnings from my diary today"
-- "Learnings from my diary today"
-- "Learnings from my diary"
+    if (!response || response.length < 5) {
+      throw new Error('AI returned empty response — try again or check API quota');
+    }
 
-If the exact phrase appears, set startSec to where Kevin BEGINS saying that phrase.
+    // Robust JSON extraction
+    let clean = response.replace(/```json|```/g, '').trim();
+    const firstBrace = clean.indexOf('{');
+    const lastBrace  = clean.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      clean = clean.substring(firstBrace, lastBrace + 1);
+    }
 
-If the exact phrase is not present, locate the closing reflection where Kevin pivots to today's lesson/insight. Look for transition cues like:
-- "what I learned today"
-- "today's lesson"
-- "so ultimately"
-- "the takeaway"
-- "if there's one thing"
-- "so what does this mean"
+    let result;
+    try {
+      result = JSON.parse(clean);
+    } catch (parseErr) {
+      console.error('[lfmd-ai-detect] JSON parse failed. Cleaned:', clean);
+      throw new Error('AI returned malformed JSON — see console (F12). Try again.');
+    }
 
-CLIP RULES:
-- Minimum clip duration: 30 seconds
-- Maximum clip duration: 80 seconds (1 min 20 sec)
-- The clip should capture the complete reflection, ending at a natural sentence break
-- ${videoDur ? 'Video total duration is ' + videoDur + ' seconds — startSec and endSec must be within this.' : 'Estimate using ~' + speakingPace + ' words per minute (transcript has ~' + wordCount + ' words ≈ ' + estDurFromWords + 's of speech).'}
+    if (typeof result.startSec !== 'number' || typeof result.endSec !== 'number') {
+      throw new Error('AI response missing startSec/endSec numbers — see console');
+    }
 
-Return ONLY this JSON, no other text:
-{"startSec":120,"endSec":180,"excerpt":"first 8-12 words of the section","matchType":"exact|fuzzy|fallback","confidence":"high|medium|low"}`,
-      400
-    );
-    const clean = response.replace(/```json|```/g,'').trim();
-    const result = JSON.parse(clean);
-
-    // Server-side clamp: enforce 30s min, 80s max regardless of AI output
-    let startSec = Math.max(0, Math.floor(result.startSec || 0));
-    let endSec   = Math.max(startSec + 30, Math.floor(result.endSec || (startSec + 60)));
+    // ── Server-side clamp: enforce 30s min, 80s max ──────────────────────
+    let startSec = Math.max(0, Math.floor(result.startSec));
+    let endSec   = Math.max(startSec + 1, Math.floor(result.endSec));
     let dur      = endSec - startSec;
     if (dur < 30) endSec = startSec + 30;
     if (dur > 80) endSec = startSec + 80;
-    if (videoDur && endSec > videoDur) {
-      endSec = videoDur;
-      if (endSec - startSec < 30) startSec = Math.max(0, endSec - 30);
+    if (videoDur) {
+      if (endSec > videoDur) {
+        endSec = videoDur;
+        if (endSec - startSec < 30) startSec = Math.max(0, endSec - 30);
+      }
+      if (startSec >= videoDur) {
+        throw new Error('AI returned start time (' + startSec + 's) past video end (' + videoDur + 's) — transcript may not match the loaded video');
+      }
     }
 
-    // Apply to LFMD controls
-    lfmdStartTime = startSec;
-    lfmdEndTime   = endSec;
-    document.getElementById('lfmd-start-display').textContent = lfmdFmt(startSec);
-    document.getElementById('lfmd-end-display').textContent   = lfmdFmt(endSec);
-    if(typeof lfmdUpdateClipInfo==='function') lfmdUpdateClipInfo();
-    if(typeof lfmdUpdScrubber==='function') lfmdUpdScrubber();
+    // ── Apply via the IIFE setter (this is the bit the old code got wrong) ─
+    if (typeof window.lfmdSetClipRange !== 'function') {
+      throw new Error('LFMD setClipRange not available — reload the page');
+    }
+    const applied = window.lfmdSetClipRange(startSec, endSec);
+    console.log('[lfmd-ai-detect] applied range:', applied);
 
-    const matchLabel = result.matchType === 'exact' ? '🎯 exact phrase' :
-                       result.matchType === 'fuzzy' ? '~ near phrase' :
-                       '↪ fallback';
-    statusEl.textContent = '✓ ' + lfmdFmt(startSec) + ' → ' + lfmdFmt(endSec) + ' (' + (endSec-startSec) + 's) · ' + matchLabel + ' · ' + (result.excerpt ? '"' + result.excerpt + '"' : '');
-    statusEl.style.color = result.matchType === 'exact' ? 'var(--green)' :
-                            result.matchType === 'fuzzy' ? 'var(--cyan)' : 'var(--muted)';
-    showToast('LFMD section detected ✓ — scrub video to verify, adjust if needed','success');
-  }catch(e){
-    statusEl.textContent='Error: '+e.message; statusEl.style.color='var(--red)';
-    showToast('AI LFMD detect failed: '+e.message,'error');
-  }finally{ if(resetBtn) resetBtn(); }
+    const matchLabel = result.matchType === 'exact' ? '🎯 exact phrase'
+                     : result.matchType === 'fuzzy' ? '~ near phrase'
+                     : '↪ fallback cue';
+
+    const fmt = (s) => {
+      const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+      return m + ':' + (ss < 10 ? '0' : '') + ss;
+    };
+    const excerpt = result.excerpt ? ' · "' + String(result.excerpt).substring(0, 60) + '"' : '';
+    setStatus('✓ ' + fmt(applied.start) + ' → ' + fmt(applied.end) + ' (' + (applied.end - applied.start) + 's) · ' + matchLabel + excerpt,
+      result.matchType === 'exact' ? 'var(--green)' : 'var(--cyan)');
+    showToast('LFMD section detected ✓ — verify in preview, adjust if needed', 'success');
+
+  } catch (e) {
+    console.error('[lfmd-ai-detect] failed:', e);
+    setStatus('⚠ ' + e.message, 'var(--red)');
+    showToast('AI LFMD detect failed: ' + e.message, 'error');
+  } finally {
+    if (resetBtn) resetBtn();
+  }
 }
 
 // ── 3. PENDING EDITING — AI fill metadata ────────────────────────────────────────
