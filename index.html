@@ -1564,6 +1564,10 @@ function showToast(msg, type) {
   } catch(e) { console.log('[toast]', msg); }
 }
 
+function scheduleBufferAll() {
+  showToast('Buffer scheduling is not connected yet — publish manually for now.', 'info');
+}
+
 // ============================================================
 // MODAL HELPERS
 // ============================================================
@@ -2292,7 +2296,7 @@ function renderDashboard() {
   document.getElementById('top10-body').innerHTML = published.length
     ? published.map((r,i) => `<tr onclick="openDetail('${r.id}')">
         <td style="font-family:'DM Mono',monospace;color:var(--muted)">${i+1}</td>
-        <td class="td-name">${fv(r,'name')||'—'}</td>
+        <td class="td-name">${escapeHtml(fv(r,'name')||'—')}</td>
         <td>${fmtDate(fv(r,'dateYT'))}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--accent)">${fvn(r,'engMonth').toLocaleString()}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--muted)">#${i+1}</td>
@@ -2352,7 +2356,7 @@ function renderCalendar() {
     return `<div class="cal-cell">
       <div class="cal-num ${isToday?'today':''} ${!c.cur?'other-month':''}">${c.day}</div>
       ${show.map(r => {
-        const safeName = (fv(r,'name')||'—').replace(/"/g,'&quot;');
+        const safeName = escapeHtml(fv(r,'name')||'—');
         return `<div class="cal-event ${statusCls[fv(r,'status')]||''}" title="${safeName}">
           <span class="cal-event-name" onclick="openDetail('${r.id}')">${safeName}</span>
           <button class="cal-event-edit" title="Edit record" onclick="event.stopPropagation();openEditDrawer('${r.id}')">✏</button>
@@ -2375,7 +2379,7 @@ function calShowDay(day) {
   list.forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); unique.push(r); } });
   if (!unique.length) return;
   const items = unique.map(r => {
-    const name = (fv(r,'name')||'—').replace(/"/g,'&quot;');
+    const name = escapeHtml(fv(r,'name')||'—');
     return `<div style="display:flex;gap:8px;align-items:center;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
       <div style="flex:1;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
       <button onclick="closeModal('detail-modal');openDetail('${r.id}')" style="background:none;border:1px solid var(--border);color:var(--text);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px">View</button>
@@ -2483,9 +2487,9 @@ function renderEditingPage() {
     <tbody>${recs.map(r => {
       const od = isOverdue(r);
       return `<tr class="${od?'overdue':''}" onclick="openDetail('${r.id}')">
-        <td class="td-name">${fv(r,'name')||'—'}</td>
+        <td class="td-name">${escapeHtml(fv(r,'name')||'—')}</td>
         <td>${typeBadge(fv(r,'type'))}</td>
-        <td style="font-size:11px;color:var(--muted)">${fv(r,'category')||'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${escapeHtml(fv(r,'category')||'—')}</td>
         <td>${statusBadge(fv(r,'status'))}</td>
         <td style="font-size:12px;color:${od?'var(--red)':'var(--muted)'}">${fmtDate(fv(r,'pubDate'))}</td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap">
@@ -2776,13 +2780,13 @@ function buildContentPanel(r, mode) {
   const transcription = f.description || '';
   const transcIsUrl   = transcription && transcription.startsWith('http');
   const transcHtml    = transcription
-    ? `<div class="panel-info-item"><span class="lbl">Transcription:</span>${transcIsUrl ? `<a class="val" href="${transcription}" target="_blank">Open Doc ↗</a>` : `<span class="val" title="${transcription}">${transcription.substring(0,40)}${transcription.length>40?'…':''}</span>`}</div>`
+    ? `<div class="panel-info-item"><span class="lbl">Transcription:</span>${transcIsUrl ? `<a class="val" href="${/^https?:\/\//.test(transcription)?escapeHtml(transcription):'#'}" target="_blank">Open Doc ↗</a>` : `<span class="val" title="${escapeHtml(transcription)}">${escapeHtml(transcription.substring(0,40))}${transcription.length>40?'…':''}</span>`}</div>`
     : `<div class="panel-info-item"><span class="lbl">Transcription:</span><span class="val" style="color:var(--red)">⚠️ Missing</span></div>`;
   const infoBar = `<div class="panel-info-bar">
     <div class="panel-info-item"><span class="lbl">Status:</span><span class="val">${statusBadge(f.status)}</span></div>
     <div class="panel-info-item"><span class="lbl">Type:</span><span class="val">${typeBadge(type)||'—'}</span></div>
     ${transcHtml}
-    ${f.optLink ? `<div class="panel-info-item"><span class="lbl">Opt. Video:</span><a class="val" href="${f.optLink}" target="_blank">Open ↗</a></div>` : ''}
+    ${f.optLink ? `<div class="panel-info-item"><span class="lbl">Opt. Video:</span><a class="val" href="${/^https?:\/\//.test(f.optLink)?escapeHtml(f.optLink):'#'}" target="_blank">Open ↗</a></div>` : ''}
   </div>`;
 
   // YT Full Link row — shown for Summary and LFMD types
@@ -2808,7 +2812,7 @@ function buildContentPanel(r, mode) {
     fieldsHtml += copyFields.map(cf => {
       const val = f[cf.key] || '';
       return `<div class="copy-field"><label>${cf.label}</label>
-        <textarea rows="${cf.rows}" id="cf-${recId}-${cf.key}" onchange="saveCopyField('${recId}','${cf.key}',this.value)">${val}</textarea>
+        <textarea rows="${cf.rows}" id="cf-${recId}-${cf.key}" onchange="saveCopyField('${recId}','${cf.key}',this.value)">${escapeHtml(val)}</textarea>
       </div>`;
     }).join('');
   }
@@ -2818,7 +2822,7 @@ function buildContentPanel(r, mode) {
   if (mode === 'qc' || mode === 'copy') {
     feedbackHtml = `<div class="copy-field" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
       <label>📝 Feedback / Amendments <span style="font-size:10px;color:var(--muted);font-weight:400">— notes for revisions after AI generation</span></label>
-      <textarea rows="3" id="fb-${recId}" onchange="saveCopyField('${recId}','feedback',this.value)">${f.feedback||''}</textarea>
+      <textarea rows="3" id="fb-${recId}" onchange="saveCopyField('${recId}','feedback',this.value)">${escapeHtml(f.feedback||'')}</textarea>
     </div>`;
   }
 
@@ -2839,16 +2843,17 @@ function buildContentPanel(r, mode) {
   }
 
   // Thumbnail
+  const thumbSafeSrc = /^(data:|https?:\/\/)/.test(f.thumbnailData||'') ? escapeHtml(f.thumbnailData) : '#';
   const thumbDlHtml = f.thumbnailData
-    ? `<span id="tdl-wrap-${recId}"><a id="tdl-${recId}" href="${f.thumbnailData}" download="${f.thumbnailName||'thumbnail.jpg'}" class="btn-thumb-dl">⬇ Download Thumbnail</a></span>`
+    ? `<span id="tdl-wrap-${recId}"><a id="tdl-${recId}" href="${thumbSafeSrc}" download="${escapeHtml(f.thumbnailName||'thumbnail.jpg')}" class="btn-thumb-dl">⬇ Download Thumbnail</a></span>`
     : `<span id="tdl-wrap-${recId}" style="display:none"><a id="tdl-${recId}" href="#" download="thumbnail.jpg" class="btn-thumb-dl">⬇ Download Thumbnail</a></span>`;
   const thumbFieldHtml = `<div class="copy-field"><label>Thumbnail ${thumbDlHtml}</label>
     <div class="thumb-upload">
       <input type="file" accept="image/*" onchange="handleThumbUpload(event,'tp-${recId}','tn-${recId}','${recId}')">
       <div class="thumb-label">📎 Click to attach thumbnail</div>
-      ${f.thumbnailData ? `<img src="${f.thumbnailData}" class="thumb-preview" style="display:block" id="tp-${recId}">` : `<img id="tp-${recId}" class="thumb-preview" src="" alt="">`}
+      ${f.thumbnailData ? `<img src="${thumbSafeSrc}" class="thumb-preview" style="display:block" id="tp-${recId}">` : `<img id="tp-${recId}" class="thumb-preview" src="" alt="">`}
     </div>
-    <input type="hidden" id="tn-${recId}" value="${f.thumbnailName||''}">
+    <input type="hidden" id="tn-${recId}" value="${escapeHtml(f.thumbnailName||'')}">
   </div>`;
 
   // Edit/dup/del buttons
@@ -2892,11 +2897,11 @@ function buildContentPanel(r, mode) {
     </div>`;
   }
 
-  const thumbImg = f.thumbnailData ? `<img src="${f.thumbnailData}" style="height:36px;width:auto;border-radius:4px;object-fit:cover;margin-left:8px">` : '';
+  const thumbImg = f.thumbnailData ? `<img src="${/^(data:|https?:\/\/)/.test(f.thumbnailData)?escapeHtml(f.thumbnailData):'#'}" style="height:36px;width:auto;border-radius:4px;object-fit:cover;margin-left:8px">` : '';
 
   return `<div class="content-panel" id="panel-${recId}" data-yt-full-link="${ytFullLinkVal}">
     <div class="content-panel-header" onclick="togglePanel('${bodyId}')">
-      <h4>${f.name||'Untitled'}</h4>
+      <h4>${escapeHtml(f.name||'Untitled')}</h4>
       <div class="meta">
         ${thumbImg}
         <span style="font-size:11px;color:var(--muted)">${responsible}</span>
@@ -3110,11 +3115,11 @@ function renderPublishedPage() {
   document.getElementById('pub-table').innerHTML =
     `<table><thead><tr><th>Content Name</th><th>Type</th><th>Category</th><th>Date Published (YT)</th><th>YT Link</th><th>Engagements</th><th>Action</th></tr></thead>
     <tbody>${slice.map(r => `<tr onclick="openDetail('${r.id}')">
-      <td class="td-name">${fv(r,'name')||'—'}</td>
+      <td class="td-name">${escapeHtml(fv(r,'name')||'—')}</td>
       <td>${typeBadge(fv(r,'type'))}</td>
-      <td style="font-size:11px;color:var(--muted)">${fv(r,'category')||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${escapeHtml(fv(r,'category')||'—')}</td>
       <td>${fmtDate(fv(r,'dateYT'))}</td>
-      <td>${fv(r,'ytLink')?`<a class="td-link" href="${fv(r,'ytLink')}" target="_blank" onclick="event.stopPropagation()">Open ↗</a>`:'—'}</td>
+      <td>${fv(r,'ytLink')?`<a class="td-link" href="${/^https?:\/\//.test(fv(r,'ytLink'))?escapeHtml(fv(r,'ytLink')):'#'}" target="_blank" onclick="event.stopPropagation()">Open ↗</a>`:'—'}</td>
       <td style="font-family:'DM Mono',monospace;color:var(--accent)">${fvn(r,'engMonth').toLocaleString()}</td>
       <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openStatusModal('${r.id}')">Status</button></td>
     </tr>`).join('')}</tbody></table>
@@ -3140,7 +3145,7 @@ function renderStatsPage() {
   });
   const sel = document.getElementById('stats-episode-select');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">— Select an episode —</option>' + published.map(r => `<option value="${r.id}">${fv(r,'name')||r.id}</option>`).join('');
+  sel.innerHTML = '<option value="">— Select an episode —</option>' + published.map(r => `<option value="${r.id}">${escapeHtml(fv(r,'name')||r.id)}</option>`).join('');
   if (cur) sel.value = cur;
   if (cur) loadStatsForEpisode();
 }
@@ -3209,11 +3214,11 @@ function openDetail(recId) {
       <div class="detail-field"><div class="df-label">Target Publish Date</div><div class="df-value">${fmtDate(f.pubDate)}</div></div>
       <div class="detail-field"><div class="df-label">Date Published (YT)</div><div class="df-value">${fmtDate(f.dateYT)}</div></div>
       <div class="detail-field"><div class="df-label">Date Published (Other)</div><div class="df-value">${fmtDate(f.dateOther)}</div></div>
-      <div class="detail-field"><div class="df-label">Responsible</div><div class="df-value">${responsible||'—'}</div></div>
+      <div class="detail-field"><div class="df-label">Responsible</div><div class="df-value">${escapeHtml(responsible||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Engagements (Month)</div><div class="df-value" style="font-family:'DM Mono',monospace;color:var(--accent)">${(f.engMonth||0).toLocaleString()}</div></div>
     </div>
-    ${links.length?`<div class="detail-field"><div class="df-label">Links</div><div class="platform-links">${links.map(([lbl,url])=>`<a class="platform-link" href="${url}" target="_blank">${lbl} ↗</a>`).join('')}</div></div>`:''}
-    ${f.videoTitle?`<div class="detail-field"><div class="df-label">Video Title</div><div class="df-value">${f.videoTitle}</div></div>`:''}`;
+    ${links.length?`<div class="detail-field"><div class="df-label">Links</div><div class="platform-links">${links.map(([lbl,url])=>`<a class="platform-link" href="${/^https?:\/\//.test(url)?escapeHtml(url):'#'}" target="_blank">${escapeHtml(lbl)} ↗</a>`).join('')}</div></div>`:''}
+    ${f.videoTitle?`<div class="detail-field"><div class="df-label">Video Title</div><div class="df-value">${escapeHtml(f.videoTitle)}</div></div>`:''}`;
   // Show AI buttons for chainable statuses + types
   const aiBtn = document.getElementById('detail-ai-btn');
   const aoBtn = document.getElementById('detail-ao-btn');
@@ -3502,12 +3507,12 @@ async function acPrepThumbnail(state){
     const line2 = l2m ? l2m[1].trim().toUpperCase() : '';
     // Wait up to 2s for the thumbnail page inputs to exist (page just navigated)
     for (let i = 0; i < 20; i++) {
-      const t1 = document.getElementById('th-line1');
-      const t2 = document.getElementById('th-line2');
+      const t1 = document.getElementById('th-l1');
+      const t2 = document.getElementById('th-l2');
       if (t1 && t2) {
         if (line1) t1.value = line1;
         if (line2) t2.value = line2;
-        if (typeof window.thRedraw === 'function') window.thRedraw();
+        if (typeof thDraw === 'function') thDraw();
         break;
       }
       await new Promise(r => setTimeout(r, 100));
@@ -4014,6 +4019,8 @@ Generate 2-4 topic hashtags FIRST (pacing, mindset, vulnerability, streak runnin
 
 OUTPUT: Plain text only. No markdown. No commentary. Label each section clearly.`;
 
+const _cwInFlight = new Set();
+
 async function generateCopywriting(recId) {
   const rec = allRecords.find(r => r.id === recId);
   if (!rec) return;
@@ -4059,6 +4066,9 @@ async function generateCopywriting(recId) {
     return;
   }
 
+  if (_cwInFlight.has(recId)) return;
+  _cwInFlight.add(recId);
+
   try {
     const response = await fetch(proxyUrl, {
       method: 'POST',
@@ -4071,7 +4081,8 @@ async function generateCopywriting(recId) {
     });
     if (!response.ok) { const err = await response.json().catch(()=>({})); throw new Error(err.error?.message || 'HTTP ' + response.status); }
     const data = await response.json();
-    const text = data.content.map(b => b.text || '').join('\n').trim();
+    const text = (Array.isArray(data.content) ? data.content : []).map(b => b.text || '').join('\n').trim();
+    if (!text) { throw new Error(data.error?.message || 'AI returned no content'); }
 
     if (type === 'Long Form Video')             populateLongFormFields(recId, text, f);
     else if (type === 'Learnings From My Diary') populateLFMDFields(recId, text, f);
@@ -4097,6 +4108,7 @@ async function generateCopywriting(recId) {
     if (status) status.textContent = 'Error: ' + err.message;
     showToast('AI generation failed: ' + err.message, 'error');
   } finally {
+    _cwInFlight.delete(recId);
     if (btn) btn.disabled = false;
     if (spin) spin.style.display = 'none';
   }
@@ -8675,7 +8687,8 @@ async function callClaudeAI(userPrompt, systemPrompt='', maxTokens=600){
   const res=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':aiKey.trim(),'anthropic-version':'2023-06-01'},body:JSON.stringify(body)});
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+res.status);}
   const data=await res.json();
-  const text=data.content.map(b=>b.text||'').join('').trim();
+  const text=(Array.isArray(data.content)?data.content:[]).map(b=>b.text||'').join('').trim();
+  if(!text){throw new Error(data.error?.message||'AI returned no content');}
   // Log usage
   const usage=data.usage||{};
   if(usage.input_tokens) logAiUsage({recId:'system',feature:'AI Tools',inputTokens:usage.input_tokens,outputTokens:usage.output_tokens||0});
