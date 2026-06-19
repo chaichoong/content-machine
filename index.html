@@ -1561,7 +1561,7 @@ function showToast(msg, type) {
     t.textContent = msg;
     host.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
-  } catch(e) { console.log('[toast]', msg); }
+  } catch(e) { console.warn('[toast]', msg, e); }
 }
 
 function scheduleBufferAll() {
@@ -1616,6 +1616,19 @@ const AT_BASE  = 'appnqjDpqDniH3IRl';
 const AT_TABLE = 'tblEPzZdwBZeSXFRB';
 const PROXY_URL = () => localStorage.getItem('cm_proxy_url') || 'https://content-machine-proxy.kevinbrittain.workers.dev';
  // ⚙️ Content Machine Runpreneur
+const CM_FETCH_TIMEOUT_MS = 90000; // 90s ceiling for proxied AI / network calls
+async function fetchWithTimeout(url, opts = {}, ms = CM_FETCH_TIMEOUT_MS) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Request timed out after ' + Math.round(ms/1000) + 's — the AI proxy did not respond.');
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // Map app keys -> Airtable field NAMES (not IDs).
 // Using names + typecast:true is simpler and more reliable than field IDs.
@@ -1744,7 +1757,6 @@ function logAiUsage({ recId, feature, inputTokens, outputTokens, contentName }) 
   });
   // Refresh usage dashboard if it's open
   if (document.querySelector('.page.active')?.id === 'page-dashboard') renderAiUsagePanel();
-  console.log('[AI LOG]', feature, 'in:'+inputTokens, 'out:'+outputTokens, '$'+costUSD.toFixed(4));
 }
 
 // Never write these to AT
@@ -2030,7 +2042,6 @@ async function loadAllRecords() {
       return withinGrace;
     });
     allRecords = [...preserve, ...tempRecords];
-    console.log('[CM] loadAllRecords: pages=' + pages + ' fetched=' + tempRecords.length + ' preserved=' + preserve.length + ' total=' + allRecords.length);
     setBadge('live', allRecords.length);
     showToast('● ' + allRecords.length + ' records loaded', 'success');
     if (_refreshTimer) clearInterval(_refreshTimer);
@@ -2470,7 +2481,6 @@ function renderEditingPage() {
   const search = (document.getElementById('editing-search')?.value || '').toLowerCase();
   const STATUS_ORDER = ['New Upload','Editing and Optimisation in Progress','Optimisation and Design Done'];
   let recs = getByStatus(STATUS_ORDER);
-  console.log('[CM] renderEditingPage: allRecords=' + allRecords.length + ' matching=' + recs.length + ' statuses in allRecords:', [...new Set(allRecords.map(r => fv(r,'status')))].join(', '));
   if (cat)    recs = recs.filter(r => fv(r,'category') === cat);
   if (search) recs = recs.filter(r => (fv(r,'name')||'').toLowerCase().includes(search));
   recs = recs.sort((a,b) => STATUS_ORDER.indexOf(fv(a,'status')) - STATUS_ORDER.indexOf(fv(b,'status')));
@@ -2721,7 +2731,6 @@ async function saveDrawer() {
       // Stamp creation time so the grace-period merge can protect this record
       created._savedAt = Date.now();
       allRecords.unshift(created);
-      console.log('[CM] saveDrawer: record created — id=' + created.id + ' status=' + fv(created, 'status') + ' allRecords.length=' + allRecords.length);
       closeDrawer();
       showToast('✓ Record saved to Airtable', 'success');
       // Navigate to editing page so user sees the new record immediately
@@ -4070,7 +4079,7 @@ async function generateCopywriting(recId) {
   _cwInFlight.add(recId);
 
   try {
-    const response = await fetch(proxyUrl, {
+    const response = await fetchWithTimeout(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -4941,7 +4950,7 @@ function populateSummaryFields(recId, text, f) {
       throw new Error('no-config');
     }
     const base64=imgData.split(',')[1];
-    const res=await fetch(proxy,{method:'POST',
+    const res=await fetchWithTimeout(proxy,{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key.trim(),'anthropic-version':'2023-06-01'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:80,messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
@@ -8107,7 +8116,6 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
         const tracks = vs.getAudioTracks();
         if (tracks.length > 0) { audioTrack = tracks[0]; stream.addTrack(audioTrack); }
       }
-      console.log('[lfmd] audio track attached:', !!audioTrack);
     }catch(e){ console.warn('[lfmd] audio capture failed:', e); }
 
     // Prevent speaker echo without muting (volume=0 does not affect captureStream)
@@ -8250,7 +8258,7 @@ async function cmAiCall(systemPrompt, userPrompt, maxTokens=800){
   const key   = localStorage.getItem('cm_ai_key')||'';
   const proxy = (localStorage.getItem('cm_proxy_url')||'https://content-machine-proxy.kevinbrittain.workers.dev').replace(/\/$/,'');
   if(!key) throw new Error('Anthropic API key not set — click ✨ Set AI Key in the sidebar');
-  const res = await fetch(proxy, {
+  const res = await fetchWithTimeout(proxy, {
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
     body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,
@@ -8324,7 +8332,6 @@ Return ONLY a JSON array, no prose, no markdown fences, no explanation:
 [{"line1":"FEELING VULNERABLE","line2":"WHEN RUNNING"},{"line1":"WHY I ALMOST","line2":"QUIT TODAY"},{"line1":"THE LESSON FROM","line2":"FAILURE"}]`,
       400
     );
-    console.log('[sm-ai-titles] raw response:', response);
 
     if (!response || response.length < 5) {
       throw new Error('AI returned empty response — try again, or check API key/quota');
@@ -8467,7 +8474,6 @@ async function lfmdAiDetect(){
       '{"startSec":120,"endSec":180,"excerpt":"first 8-12 words","matchType":"exact","confidence":"high"}';
 
     const response = await cmAiCall(KEVIN_CONTEXT, prompt, 400);
-    console.log('[lfmd-ai-detect] raw response:', response);
 
     if (!response || response.length < 5) {
       throw new Error('AI returned empty response — try again or check API quota');
@@ -8514,7 +8520,6 @@ async function lfmdAiDetect(){
       throw new Error('LFMD setClipRange not available — reload the page');
     }
     const applied = window.lfmdSetClipRange(startSec, endSec);
-    console.log('[lfmd-ai-detect] applied range:', applied);
 
     const matchLabel = result.matchType === 'exact' ? '🎯 exact phrase'
                      : result.matchType === 'fuzzy' ? '~ near phrase'
@@ -8585,7 +8590,7 @@ async function qcAiCheck(){
 
     // Build a summary of copy for each episode
     const episodeSummaries = qcRecs.slice(0,5).map(r=>{
-      const copy = ['ytDescription','tikTokCaption','igCaption','fbCaption','linkedInCaption']
+      const copy = ['copy_yt','copy_fb_post','copy_insta_post','copy_tiktok','copy_li','copy_blog','copy_threads','copy_x']
         .map(k=>{ const v=fv(r,k); return v?k+': '+v.substring(0,120):''; }).filter(Boolean).join('\n');
       return `EPISODE: ${fv(r,'name')||r.id}\n${copy||'(no copy yet)'}`;
     }).join('\n\n---\n\n');
@@ -8684,7 +8689,7 @@ async function callClaudeAI(userPrompt, systemPrompt='', maxTokens=600){
   if(!aiKey||!proxyUrl) throw new Error('Set your Anthropic key and proxy URL in Settings first');
   const body={model:'claude-sonnet-4-6',max_tokens:maxTokens,messages:[{role:'user',content:userPrompt}]};
   if(systemPrompt) body.system=systemPrompt;
-  const res=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':aiKey.trim(),'anthropic-version':'2023-06-01'},body:JSON.stringify(body)});
+  const res=await fetchWithTimeout(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':aiKey.trim(),'anthropic-version':'2023-06-01'},body:JSON.stringify(body)});
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+res.status);}
   const data=await res.json();
   const text=(Array.isArray(data.content)?data.content:[]).map(b=>b.text||'').join('').trim();
@@ -17704,7 +17709,7 @@ function appendYtLink(recId) {
       const cid = localStorage.getItem(K.SCID) || '';
       const sec = localStorage.getItem(K.SSEC) || '';
       if (!proxyUrl || !cid || !sec) { showToast('Strava OAuth: missing config','error'); return; }
-      const res = await fetch(proxyUrl.replace(/\/$/,'')+'/strava/oauth', {
+      const res = await fetchWithTimeout(proxyUrl.replace(/\/$/,'')+'/strava/oauth', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ client_id: cid, client_secret: sec, code, grant_type:'authorization_code' })
@@ -17735,7 +17740,7 @@ function appendYtLink(recId) {
     const sec = localStorage.getItem(K.SSEC) || '';
     const ref = localStorage.getItem(K.SREF) || '';
     if (!proxyUrl || !cid || !sec || !ref) throw new Error('Strava not configured');
-    const res = await fetch(proxyUrl.replace(/\/$/,'')+'/strava/oauth', {
+    const res = await fetchWithTimeout(proxyUrl.replace(/\/$/,'')+'/strava/oauth', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ client_id: cid, client_secret: sec, refresh_token: ref, grant_type:'refresh_token' })
@@ -17757,7 +17762,7 @@ function appendYtLink(recId) {
     if (!stripeKey) return { ok:false, reason:'no_key' };
     if (!proxyUrl) return { ok:false, reason:'no_proxy' };
     try {
-      const res = await fetch(proxyUrl.replace(/\/$/,'')+'/stripe/balance', {
+      const res = await fetchWithTimeout(proxyUrl.replace(/\/$/,'')+'/stripe/balance', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ stripe_key: stripeKey })
@@ -17792,7 +17797,7 @@ function appendYtLink(recId) {
     if (!stripeKey) return { ok:false, reason:'no_key' };
     if (!proxyUrl) return { ok:false, reason:'no_proxy' };
     try {
-      const res = await fetch(proxyUrl.replace(/\/$/,'')+'/stripe/lifetime_gross', {
+      const res = await fetchWithTimeout(proxyUrl.replace(/\/$/,'')+'/stripe/lifetime_gross', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ stripe_key: stripeKey })
@@ -17825,7 +17830,7 @@ function appendYtLink(recId) {
     try {
       const tok = await stravaAccessToken();
       const proxyUrl = localStorage.getItem('cm_proxy_url') || '';
-      const res = await fetch(proxyUrl.replace(/\/$/,'')+'/strava/proxy', {
+      const res = await fetchWithTimeout(proxyUrl.replace(/\/$/,'')+'/strava/proxy', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ method:'GET', path:'/athlete/activities?per_page=1', token: tok })
@@ -17895,7 +17900,7 @@ function appendYtLink(recId) {
     try {
       const tok = await stravaAccessToken();
       const proxyUrl = localStorage.getItem('cm_proxy_url') || '';
-      const res = await fetch(proxyUrl.replace(/\/$/,'')+'/strava/proxy', {
+      const res = await fetchWithTimeout(proxyUrl.replace(/\/$/,'')+'/strava/proxy', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -18100,7 +18105,7 @@ async function whisperTranscribeChunk(wavBlob, openaiKey) {
   fd.append('file', wavBlob, 'audio.wav');
   fd.append('model', 'whisper-1');
   fd.append('language', 'en');
-  const res  = await fetch(PROXY_URL() + '/whisper', { method: 'POST', headers: { 'x-openai-key': openaiKey }, body: fd });
+  const res  = await fetchWithTimeout(PROXY_URL() + '/whisper', { method: 'POST', headers: { 'x-openai-key': openaiKey }, body: fd });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || 'Whisper HTTP ' + res.status);
   return (data.text || '').trim();
@@ -18115,7 +18120,7 @@ async function whisperTranscribeChunkTimed(wavBlob, openaiKey, chunkStartSec = 0
   fd.append('response_format', 'verbose_json');
   fd.append('timestamp_granularities[]', 'segment');
   fd.append('timestamp_granularities[]', 'word');
-  const res  = await fetch(PROXY_URL() + '/whisper', { method: 'POST', headers: { 'x-openai-key': openaiKey }, body: fd });
+  const res  = await fetchWithTimeout(PROXY_URL() + '/whisper', { method: 'POST', headers: { 'x-openai-key': openaiKey }, body: fd });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || 'Whisper HTTP ' + res.status);
   const text = (data.text || '').trim();
