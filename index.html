@@ -8,28 +8,29 @@
 <style>
   :root{--bg:#F1F3EF;--surface:#FBFBF9;--surface2:#F4F6F1;--border:#DDE1D9;--accent:#2C6E49;--accent2:#1B4A30;--text:#1C2422;--muted:#5A6660;--green:#2C6E49;--red:#A33B3B;--blue:#3560A8;--yellow:#8A6B2D;--pink:#8B6FAE;--cyan:#5F7A3A;--teal:#368859}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex}
-  #sidebar{width:220px;height:100vh;background:#263330;border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto}
-  .sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px;font-weight:700;color:#FBFBF9;letter-spacing:.05em;display:flex;align-items:center;gap:8px}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+  /* Top tab bar (was a left sidebar) — so the module reads as a single page when embedded as an iframe in the main app */
+  #sidebar{display:flex;flex-direction:row;align-items:center;gap:6px;width:100%;height:54px;background:#263330;border-bottom:1px solid rgba(255,255,255,.1);position:fixed;top:0;left:0;right:0;z-index:100;padding:0 14px}
+  .sidebar-logo{flex-shrink:0;padding:0 12px 0 2px;border-bottom:none;font-size:13px;font-weight:600;color:#FBFBF9;letter-spacing:.03em;display:flex;align-items:center;gap:8px;white-space:nowrap}
   .sidebar-logo span{font-size:18px}
-  nav{flex:1;padding:12px 0;overflow-y:auto}
-  nav a{display:flex;align-items:center;gap:10px;padding:9px 18px;color:#BFC3BD;text-decoration:none;font-size:13px;font-weight:600;transition:all .15s;border-left:2px solid transparent;cursor:pointer}
+  nav{flex:1;display:flex;flex-direction:row;align-items:center;gap:2px;height:100%;padding:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+  nav a{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;height:100%;color:#BFC3BD;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer}
   nav a:hover{color:#FBFBF9;background:rgba(255,255,255,.06)}
-  nav a.active{color:#FBFBF9;border-left-color:#4DA574;background:rgba(255,255,255,.09)}
-  .nav-icon{font-size:15px;width:18px;text-align:center}
-  .sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:#BFC3BD;font-family:'DM Sans',sans-serif}
-  .data-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(77,165,116,.18);border:1px solid rgba(77,165,116,.4);color:#9FD4B0;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700}
-  #main{margin-left:220px;flex:1;min-height:100vh}
+  nav a.active{color:#FBFBF9;font-weight:600;border-bottom-color:#4DA574;background:rgba(255,255,255,.07)}
+  .nav-icon{font-size:15px;width:auto;text-align:center}
+  .sidebar-footer{flex-shrink:0;display:flex;flex-direction:row;align-items:center;gap:6px;border-top:none;padding:0;font-size:11px;color:#BFC3BD;font-family:'DM Sans',sans-serif}
+  .data-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(77,165,116,.18);border:1px solid rgba(77,165,116,.4);color:#9FD4B0;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:600}
+  #main{margin-left:0;margin-top:54px;min-height:calc(100vh - 54px)}
   .page{display:none;padding:32px;animation:fadeIn .2s ease}
   .page.active{display:block}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-  .page-title{font-size:26px;font-weight:800;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+  .page-title{font-size:26px;font-weight:700;margin-bottom:24px;display:flex;align-items:center;gap:10px}
   .page-title .emoji{font-size:28px}
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;transition:border-color .2s}
   .stat-card:hover{border-color:var(--accent)}
   .stat-card .label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
-  .stat-card .value{font-size:32px;font-weight:800;font-family:'DM Sans',sans-serif}
+  .stat-card .value{font-size:32px;font-weight:700;font-family:'DM Sans',sans-serif}
   .stat-card.green .value{color:var(--green)}.stat-card.red .value{color:var(--red)}.stat-card.blue .value{color:var(--blue)}.stat-card.yellow .value{color:var(--yellow)}.stat-card.pink .value{color:var(--pink)}.stat-card.cyan .value{color:var(--cyan)}.stat-card.orange .value{color:var(--accent)}
   .filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
   .filter-bar select,.filter-bar input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;min-width:160px;cursor:pointer;outline:none}
@@ -39,7 +40,7 @@
   .btn-reset:hover{border-color:var(--accent);color:var(--accent)}
   .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  thead th{background:var(--surface2);padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+  thead th{background:var(--surface2);padding:11px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
   tbody tr{border-bottom:1px solid rgba(221,225,217,.7);transition:background .1s;cursor:pointer}
   tbody tr:hover{background:var(--surface2)}
   tbody tr:last-child{border-bottom:none}
@@ -47,7 +48,7 @@
   .td-name{font-weight:600;color:var(--text);max-width:320px}
   .td-link{color:var(--blue);text-decoration:none;font-family:'DM Sans',sans-serif;font-size:11px}
   .td-link:hover{text-decoration:underline}
-  .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.02em}
+  .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;letter-spacing:.02em}
   .badge-new{background:#EED9D9;color:#A33B3B;border:1px solid #D9B8B8}
   .badge-editing{background:#DCE5F2;color:#3560A8;border:1px solid #C0CFE3}
   .badge-optdone{background:#D8EAEC;color:#2A6F7A;border:1px solid #BFDDE0}
@@ -64,22 +65,22 @@
   .type-image{background:#E9EEDD;color:#4A5F2E;border:1px solid #D3DDC0}
   .type-audio{background:#DDE8DF;color:#2C6E49;border:1px solid #C4D6C8}
   .type-written{background:#F7EFD9;color:#8A6B2D;border:1px solid #E0CDA4}
-  .btn{padding:8px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;border:none}
+  .btn{padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;border:none}
   .btn-primary{background:var(--accent);color:white}.btn-primary:hover{background:var(--accent2)}
   .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
   .btn-sm{padding:5px 12px;font-size:11px}
   .cal-nav{display:flex;align-items:center;gap:14px;margin-bottom:20px}
-  .cal-nav h2{font-size:20px;font-weight:800;min-width:160px}
+  .cal-nav h2{font-size:20px;font-weight:700;min-width:160px}
   .cal-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
   .cal-btn:hover{border-color:var(--accent);color:var(--accent)}
-  .cal-today-btn{background:var(--accent);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+  .cal-today-btn{background:var(--accent);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
   .calendar{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
   .cal-header{display:grid;grid-template-columns:repeat(7,1fr)}
-  .cal-day-name{padding:10px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .cal-day-name{padding:10px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2)}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
   .cal-cell{min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative}
   .cal-cell:nth-child(7n){border-right:none}
-  .cal-num{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;font-family:'DM Sans',sans-serif;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+  .cal-num{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;font-family:'DM Sans',sans-serif;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
   .cal-num.today{background:var(--accent);color:white;border-radius:50%;font-size:11px}
   .cal-num.other-month{color:rgba(90,102,96,.4)}
   .cal-event{border-left:2px solid var(--accent);color:var(--accent2);background:rgba(44,110,73,.10);font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px}
@@ -97,33 +98,33 @@
   .modal-overlay.open{display:flex}
   .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;animation:modalIn .2s ease}
   @keyframes modalIn{from{transform:scale(.95) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-  .modal h3{font-size:18px;font-weight:800;margin-bottom:20px}
+  .modal h3{font-size:18px;font-weight:700;margin-bottom:20px}
   .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
   .form-group{margin-bottom:16px}
-  .form-group label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+  .form-group label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
   .form-group input,.form-group select,.form-group textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
   .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
   .form-group textarea{resize:vertical;min-height:80px}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:24px}
-  .chart-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:.07em}
+  .chart-title{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:.07em}
   .pipeline-chart{display:flex;flex-direction:column;gap:8px}
   .pipeline-row{display:flex;align-items:center;gap:12px}
   .pipeline-label{font-size:11px;color:var(--muted);width:220px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pipeline-bar-bg{flex:1;height:22px;background:var(--surface2);border-radius:4px;overflow:hidden}
-  .pipeline-bar{height:100%;border-radius:4px;transition:width .6s ease;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:white;min-width:4px}
+  .pipeline-bar{height:100%;border-radius:4px;transition:width .6s ease;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:600;color:white;min-width:4px}
   .pipeline-count{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--muted);width:40px;text-align:right}
   .stats-episode-select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:24px;cursor:pointer}
   .stats-episode-select:focus{border-color:var(--accent)}
   .stats-platform{margin-bottom:24px}
-  .stats-platform h3{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .stats-platform h3{font-size:16px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
   .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
   .stats-input-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
   .stats-input-card .icon{font-size:18px;margin-bottom:8px}
-  .stats-input-card label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
-  .stats-input-card input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:16px;font-family:'DM Sans',sans-serif;font-weight:700;text-align:center;outline:none}
+  .stats-input-card label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+  .stats-input-card input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:16px;font-family:'DM Sans',sans-serif;font-weight:600;text-align:center;outline:none}
   .stats-input-card input:focus{border-color:var(--accent)}
-  .stats-save-btn{display:block;width:100%;margin-top:20px;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+  .stats-save-btn{display:block;width:100%;margin-top:20px;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
   .stats-save-btn:hover{background:var(--accent2)}
   #toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 18px;font-size:13px;font-weight:600;display:none;animation:toastIn .2s ease;box-shadow:0 8px 32px rgba(28,36,34,.16);max-width:340px}
   #toast.success{border-color:var(--green);color:var(--green)}
@@ -139,7 +140,7 @@
   .pag-btn:disabled{opacity:.4;cursor:not-allowed}
   tr.overdue td{background:rgba(163,59,59,.06)}
   .detail-field{margin-bottom:14px}
-  .detail-field .df-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+  .detail-field .df-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
   .detail-field .df-value{font-size:13px;color:var(--text)}
   .detail-field .df-value a{color:var(--blue);text-decoration:none}
   .detail-field .df-value a:hover{text-decoration:underline}
@@ -149,28 +150,28 @@
   .platform-link:hover{border-color:var(--accent);color:var(--accent)}
   .status-select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%}
   .status-select:focus{border-color:var(--accent)}
-  .section-heading{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .section-heading{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
   .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
   .page-header .page-title{margin-bottom:0}
   .content-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
   .content-panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer;gap:12px}
-  .content-panel-header h4{font-size:14px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .content-panel-header h4{font-size:14px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .content-panel-header .meta{display:flex;gap:8px;align-items:center;flex-shrink:0}
   .panel-toggle{font-size:18px;color:var(--muted);transition:transform .2s;flex-shrink:0}
   .panel-toggle.open{transform:rotate(180deg)}
   .content-panel-body{display:none;padding:20px}
   .content-panel-body.open{display:block}
   .copy-field{margin-bottom:18px}
-  .copy-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+  .copy-field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
   .copy-field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:vertical;min-height:120px;line-height:1.6}
   .copy-field textarea:focus{border-color:var(--accent)}
   .copy-field input[type="url"],.copy-field input[type="text"],.copy-field input[type="date"]{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
   .copy-field input:focus{border-color:var(--accent)}
-  .copy-section-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .copy-section-title{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
   .panel-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap}
-  .btn-approve{background:#DDE8DF;color:var(--green);border:1px solid #C4D6C8;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+  .btn-approve{background:#DDE8DF;color:var(--green);border:1px solid #C4D6C8;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
   .btn-approve:hover{background:#C4D6C8}
-  .btn-amend{background:#F7EFD9;color:#8A6B2D;border:1px solid #E0CDA4;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+  .btn-amend{background:#F7EFD9;color:#8A6B2D;border:1px solid #E0CDA4;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
   .btn-amend:hover{background:#E0CDA4}
   .thumb-upload{border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;position:relative}
   .thumb-upload:hover{border-color:var(--accent)}
@@ -183,43 +184,43 @@
   .copy-page-filter select:focus{border-color:var(--accent)}
   .panel-info-bar{display:flex;flex-wrap:wrap;gap:10px;background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 18px;align-items:center}
   .panel-info-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
-  .panel-info-item .lbl{font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:10px;color:var(--muted)}
+  .panel-info-item .lbl{font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:10px;color:var(--muted)}
   .panel-info-item .val{color:var(--text);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .panel-info-item a.val{color:var(--blue);text-decoration:none}
   .panel-info-item a.val:hover{text-decoration:underline}
-  .btn-ai{background:#ECE6F3;color:#6B4F8E;border:1px solid #D8CCE6;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:6px}
+  .btn-ai{background:#ECE6F3;color:#6B4F8E;border:1px solid #D8CCE6;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:6px}
   .btn-ai:hover{background:#D8CCE6;border-color:#8B6FAE}
   .btn-ai:disabled{opacity:.5;cursor:not-allowed}
   .ai-spinner{display:none;width:14px;height:14px;border:2px solid rgba(139,111,174,.3);border-top-color:#8B6FAE;border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .ai-status{font-size:11px;color:#8B6FAE;font-family:'DM Sans',sans-serif;padding:6px 0;display:none}
-  .btn-thumb-dl{display:inline-flex;align-items:center;gap:5px;background:#D8EAEC;color:#2A6F7A;border:1px solid #BFDDE0;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;text-decoration:none;transition:all .15s}
+  .btn-thumb-dl{display:inline-flex;align-items:center;gap:5px;background:#D8EAEC;color:#2A6F7A;border:1px solid #BFDDE0;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;text-decoration:none;transition:all .15s}
   .btn-thumb-dl:hover{background:#BFDDE0;border-color:#2A6F7A}
   .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(28,36,34,.55);z-index:500}
   .drawer-overlay.open{display:block}
   .drawer{position:fixed;top:0;right:-520px;width:520px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:501;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
   .drawer.open{right:0}
   .drawer-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-  .drawer-header h3{font-size:16px;font-weight:800}
+  .drawer-header h3{font-size:16px;font-weight:700}
   .drawer-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;transition:color .15s;padding:0 4px}
   .drawer-close:hover{color:var(--text)}
   .drawer-body{flex:1;overflow-y:auto;padding:24px}
   .drawer-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between;flex-shrink:0}
   .drawer-footer-left{display:flex;gap:8px}
   .drawer-footer-right{display:flex;gap:8px}
-  .btn-danger{background:#EED9D9;color:var(--red);border:1px solid #D9B8B8;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+  .btn-danger{background:#EED9D9;color:var(--red);border:1px solid #D9B8B8;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
   .btn-danger:hover{background:#D9B8B8;border-color:var(--red)}
   .drawer .form-group{margin-bottom:18px}
-  .drawer .form-group label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+  .drawer .form-group label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
   .drawer .form-group input,.drawer .form-group select,.drawer .form-group textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
   .drawer .form-group input:focus,.drawer .form-group select:focus,.drawer .form-group textarea:focus{border-color:var(--accent)}
   .drawer .form-group textarea{resize:vertical;min-height:100px;line-height:1.5}
   .drawer-divider{border:none;border-top:1px solid var(--border);margin:20px 0}
-  .btn-edit{background:#DCE5F2;color:#3560A8;border:1px solid #C0CFE3;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-right:4px}
+  .btn-edit{background:#DCE5F2;color:#3560A8;border:1px solid #C0CFE3;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-right:4px}
   .btn-edit:hover{background:#C0CFE3;border-color:#3560A8}
-  .btn-del{background:#EED9D9;color:#A33B3B;border:1px solid #D9B8B8;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+  .btn-del{background:#EED9D9;color:#A33B3B;border:1px solid #D9B8B8;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
   .btn-del:hover{background:#D9B8B8;border-color:var(--red)}
-  .btn-dup{background:#F7EFD9;color:#8A6B2D;border:1px solid #E0CDA4;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-right:4px}
+  .btn-dup{background:#F7EFD9;color:#8A6B2D;border:1px solid #E0CDA4;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-right:4px}
   .btn-dup:hover{background:#E0CDA4;border-color:var(--yellow)}
 
   /* ── Video Editor ────────────────────────────────── */
@@ -251,11 +252,11 @@
     <a class="nav-link" data-page="runpreneur-sync"><span class="nav-icon">🏃</span> Runpreneur Sync</a>
   </nav>
   <div class="sidebar-footer">
-    <div id="live-badge" style="display:inline-flex;align-items:center;gap:6px;background:#F7EFD9;border:1px solid #E0CDA4;color:#8A6B2D;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer">⟳ Loading...</div>
-    <div id="sync-label" style="font-size:10px;color:var(--muted);margin-top:5px"></div>
-    <button onclick="loadAllRecords()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;font-size:10px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%">↺ Refresh Now</button>
-    <button onclick="localStorage.removeItem('cm_at_key'); showConnectScreen();" style="margin-top:4px;background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;font-size:10px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%">🔑 Reconnect Airtable</button>
-    <button onclick="showAiKeyScreen();" style="margin-top:4px;background:none;border:1px solid #D8CCE6;color:#6B4F8E;padding:5px 10px;font-size:10px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%">✨ Set AI Key</button>
+    <div id="live-badge" style="display:inline-flex;align-items:center;gap:6px;background:#F7EFD9;border:1px solid #E0CDA4;color:#8A6B2D;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">⟳ Loading...</div>
+    <div id="sync-label" style="display:none;font-size:10px;color:#BFC3BD"></div>
+    <button onclick="loadAllRecords()" style="background:none;border:1px solid rgba(255,255,255,.18);color:#BFC3BD;padding:5px 10px;font-size:10px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">↺ Refresh</button>
+    <button onclick="localStorage.removeItem('cm_at_key'); showConnectScreen();" style="background:none;border:1px solid rgba(255,255,255,.18);color:#BFC3BD;padding:5px 10px;font-size:10px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">🔑 Reconnect</button>
+    <button onclick="showAiKeyScreen();" style="background:rgba(255,255,255,.06);border:1px solid #4DA574;color:#9FD4B0;padding:5px 10px;font-size:10px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✨ Set AI Key</button>
   </div>
 </div>
 
@@ -285,7 +286,7 @@
 
   <!-- AI USAGE TRACKER — appended to dashboard -->
   <div id="dash-ai-panel" style="display:none;margin-top:24px">
-    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px">
       <span>✨ AI Usage &amp; Cost</span>
       <span style="font-size:11px;color:var(--muted);font-weight:400">— logged from Airtable + this session</span>
     </div>
@@ -343,19 +344,19 @@
         <!-- Active episode banner -->
         <div id="lfmd-maker-ep-banner" style="display:none;background:rgba(44,110,73,.10);border:1px solid #C4D6C8;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px">Active Episode</div>
-            <div id="lfmd-maker-ep-name" style="font-size:13px;font-weight:700;color:var(--text)">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px">Active Episode</div>
+            <div id="lfmd-maker-ep-name" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
           </div>
           <button onclick="cmClearActiveEp()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif">✕</button>
         </div>
 
         <!-- Upload -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:10px">🎥 Upload Episode Video</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:10px">🎥 Upload Episode Video</div>
           <div id="lfmd-drop" onclick="document.getElementById('lfmd-file-input').click()"
             style="border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg)">
             <div style="font-size:32px;margin-bottom:8px">📔</div>
-            <div style="font-weight:700;color:var(--text);margin-bottom:4px">Drop episode video here</div>
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px">Drop episode video here</div>
             <div style="font-size:12px;color:var(--muted)">Full episode or pre-trimmed LFMD clip · any resolution</div>
             <div id="lfmd-file-info" style="margin-top:8px;font-size:11px;color:var(--cyan);font-family:'DM Sans',sans-serif;display:none;line-height:1.5"></div>
           </div>
@@ -363,32 +364,32 @@
           <video id="lfmd-video" style="display:none" crossorigin="anonymous" muted playsinline loop></video>
         </div>
         <div id="lfmd-trans-wrap" style="display:none;margin-top:12px;background:#DCE5F2;border:1px solid #C0CFE3;border-radius:10px;padding:14px">
-      <div style="font-size:11px;font-weight:700;color:#3560A8;margin-bottom:10px">🎤 Auto-Transcription</div>
+      <div style="font-size:11px;font-weight:600;color:#3560A8;margin-bottom:10px">🎤 Auto-Transcription</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">GEMINI KEY <span id="lfmd-gem-status-dot" style="color:var(--muted)">●</span></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px">GEMINI KEY <span id="lfmd-gem-status-dot" style="color:var(--muted)">●</span></label>
           <input type="password" id="lfmd-gem-key" placeholder="AIza..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('cm_gemini_key',this.value);lfmdUpdateKeyDots()">
         </div>
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">OPENAI KEY (Whisper) <span id="lfmd-oai-status-dot" style="color:var(--muted)">●</span></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px">OPENAI KEY (Whisper) <span id="lfmd-oai-status-dot" style="color:var(--muted)">●</span></label>
           <input type="password" id="lfmd-oai-key" placeholder="sk-..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('cm_openai_key',this.value);lfmdUpdateKeyDots()">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div id="lfmd-trans-status" style="flex:1;font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif"></div>
-        <button onclick="lfmdTriggerTranscription()" id="lfmd-trans-btn" style="background:#2C6E49;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">▶ Transcribe</button>
+        <button onclick="lfmdTriggerTranscription()" id="lfmd-trans-btn" style="background:#2C6E49;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">▶ Transcribe</button>
       </div>
       <textarea id="lfmd-trans-result" rows="5" placeholder="Transcript appears here..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;resize:vertical;outline:none;display:none"></textarea>
       <div id="lfmd-trans-save-row" style="display:none;margin-top:6px;flex-wrap:wrap;gap:6px">
-        <button onclick="lfmdSaveTranscript()" style="background:#DDE8DF;border:1px solid #C4D6C8;color:var(--green);padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">Save Transcript to Airtable</button>
-        <button onclick="downloadTranscriptTxt('lfmd')" style="background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">⬇ Download .txt</button>
+        <button onclick="lfmdSaveTranscript()" style="background:#DDE8DF;border:1px solid #C4D6C8;color:var(--green);padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">Save Transcript to Airtable</button>
+        <button onclick="downloadTranscriptTxt('lfmd')" style="background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">⬇ Download .txt</button>
       </div>
     </div>
 
         <!-- Clip range -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700">✂️ Clip Range (LFMD Section)</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600">✂️ Clip Range (LFMD Section)</div>
             <button id="lfmd-ai-btn" onclick="lfmdAiDetect()" class="btn btn-secondary btn-sm" style="border-color:#D8CCE6;color:#6B4F8E;font-size:11px;padding:4px 10px">✨ AI Detect</button>
           </div>
           <div id="lfmd-ai-status" style="display:none;font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-bottom:8px"></div>
@@ -396,14 +397,14 @@
             <div>
               <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Start time</label>
               <div style="display:flex;align-items:center;gap:6px">
-                <span id="lfmd-start-display" style="font-size:13px;font-weight:700;color:var(--text);font-family:'DM Sans',sans-serif">0:00</span>
+                <span id="lfmd-start-display" style="font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif">0:00</span>
                 <button onclick="lfmdSetStart()" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px">📍 Set</button>
               </div>
             </div>
             <div>
               <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">End time</label>
               <div style="display:flex;align-items:center;gap:6px">
-                <span id="lfmd-end-display" style="font-size:13px;font-weight:700;color:var(--text);font-family:'DM Sans',sans-serif">—</span>
+                <span id="lfmd-end-display" style="font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif">—</span>
                 <button onclick="lfmdSetEnd()" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px">📍 Set</button>
               </div>
             </div>
@@ -428,7 +429,7 @@
 
         <!-- Episode details -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:10px">Episode Details</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:10px">Episode Details</div>
           <div>
             <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Day Number</label>
             <input id="lfmd-day" type="number" value="1943" min="1"
@@ -449,7 +450,7 @@
           <div style="font-size:10px;color:var(--muted);margin-top:6px">Playing through clip — do not close this tab</div>
         </div>
         <div id="lfmd-dl-ready" style="display:none;margin-top:12px;padding:12px 16px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span id="lfmd-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:700"></span>
+          <span id="lfmd-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:600"></span>
           <button class="btn btn-secondary btn-sm" onclick="lfmdDlAgain()">↓ Again</button>
         </div>
 
@@ -457,7 +458,7 @@
 
       <!-- RIGHT: Live preview -->
       <div style="position:sticky;top:80px">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:10px">
           Preview — 1080×1920 output
         </div>
         <canvas id="lfmd-preview"
@@ -480,7 +481,7 @@
       <div>
         <!-- Photo -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">📸 Kevin's Photo</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">📸 Kevin's Photo</div>
           <div id="th-drop" onclick="document.getElementById('th-file').click()" style="border:2px dashed var(--border);border-radius:7px;padding:20px;text-align:center;cursor:pointer;background:var(--bg)">
             <div style="font-size:26px;margin-bottom:4px">📸</div>
             <div style="font-size:11px;color:var(--muted)">Drop or click to browse</div>
@@ -491,7 +492,7 @@
         <!-- Title lines -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700">Episode Title</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600">Episode Title</div>
             <button onclick="thAiSuggest()" id="th-ai-btn" class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 10px;border-color:#D8CCE6;color:#6B4F8E">✨ AI Suggest</button>
           </div>
           <div style="margin-bottom:8px">
@@ -505,7 +506,7 @@
         </div>
         <!-- CTA button type -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">🔴 CTA Button</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">🔴 CTA Button</div>
           <select id="th-cta" onchange="thDraw()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none">
             <option value="WATCH NOW" selected>▶ WATCH NOW</option>
             <option value="SUBSCRIBE">🔔 SUBSCRIBE</option>
@@ -515,13 +516,13 @@
         </div>
         <!-- Icon picker (top-left thumbnail icon) -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">🎨 Top-Left Icon</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">🎨 Top-Left Icon</div>
           <input type="search" id="th-icon-search"
             placeholder="🔍 Search 290 icons — e.g. 'money', 'goal', 'streak'"
             oninput="window.thFilterIcons(this.value)"
             style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;margin-bottom:8px">
           <div id="th-icon-current" style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:'DM Sans',sans-serif">
-            Current: <span id="th-icon-current-name" style="color:var(--accent);font-weight:700">auto (from title)</span>
+            Current: <span id="th-icon-current-name" style="color:var(--accent);font-weight:600">auto (from title)</span>
           </div>
           <button onclick="window.thSetIcon('auto')"
             style="width:100%;background:rgba(44,110,73,.10);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;font-size:11px;cursor:pointer;margin-bottom:8px;font-family:'DM Sans',sans-serif">
@@ -535,7 +536,7 @@
         </div>
         <!-- Photo position -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">📐 Photo Position</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">📐 Photo Position</div>
           <div style="margin-bottom:6px">
             <label style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:2px">H offset <span id="th-px-v" style="color:var(--accent);font-family:'DM Sans',sans-serif">50%</span></label>
             <input type="range" id="th-px" min="0" max="100" value="50" style="width:100%;accent-color:var(--accent)" oninput="document.getElementById('th-px-v').textContent=this.value+'%';thDraw()">
@@ -553,7 +554,7 @@
       </div>
       <!-- Canvas -->
       <div style="position:sticky;top:80px">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:8px">Live Preview</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px">Live Preview</div>
         <canvas id="th-canvas" style="width:100%;display:block;border-radius:8px;border:1px solid var(--border);background:#111;aspect-ratio:16/9"></canvas>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">Updates live as you type</div>
       </div>
@@ -709,11 +710,11 @@
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <span style="font-size:18px">🟠</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text)">Strava</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Strava</div>
           <span id="rs-strava-status" style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-left:auto">not configured</span>
         </div>
         <div style="background:#F7EFD9;border:1px solid #E0CDA4;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--muted);line-height:1.5">
-          <div style="font-weight:700;color:#8A6B2D;margin-bottom:4px">⚙️ Setup required (one-time)</div>
+          <div style="font-weight:600;color:#8A6B2D;margin-bottom:4px">⚙️ Setup required (one-time)</div>
           1. Go to <a href="https://www.strava.com/settings/api" target="_blank" style="color:#8A6B2D">strava.com/settings/api</a> and create an app<br>
           2. Set Authorisation Callback Domain to: <code style="color:#8A6B2D">chaichoong.github.io</code><br>
           3. Copy your Client ID + Secret below and click Connect
@@ -740,11 +741,11 @@
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <span style="font-size:18px">🔷</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text)">GoHighLevel</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">GoHighLevel</div>
           <span id="rs-ghl-status" style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-left:auto">not configured</span>
         </div>
         <div style="background:#DCE5F2;border:1px solid #C0CFE3;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--muted);line-height:1.5">
-          <div style="font-weight:700;color:#3560A8;margin-bottom:4px">⚙️ Setup required (one-time)</div>
+          <div style="font-weight:600;color:#3560A8;margin-bottom:4px">⚙️ Setup required (one-time)</div>
           1. GHL → Settings → Private Integrations → Create new PIT<br>
           2. Scopes needed: <code>customValues.readonly</code>, <code>customValues.write</code><br>
           3. Copy Location ID + PIT below and click Test
@@ -769,11 +770,11 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
         <span style="font-size:18px">💳</span>
-        <div style="font-size:14px;font-weight:700;color:var(--text)">Stripe (Total Raised auto-fill)</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Stripe (Total Raised auto-fill)</div>
         <span id="rs-stripe-status" style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-left:auto">not configured</span>
       </div>
       <div style="background:#ECE6F3;border:1px solid #D8CCE6;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--muted);line-height:1.6">
-        <div style="font-weight:700;color:#6B4F8E;margin-bottom:4px">⚙️ Use a RESTRICTED key — read-only</div>
+        <div style="font-weight:600;color:#6B4F8E;margin-bottom:4px">⚙️ Use a RESTRICTED key — read-only</div>
         1. Stripe Dashboard → Developers → API keys → <strong>Create restricted key</strong><br>
         2. Name: <code style="color:#6B4F8E">Content Machine — Lifetime Gross</code><br>
         3. Set <strong>ALL permissions to None</strong>, then enable these TWO to <strong>Read</strong>:<br>
@@ -797,20 +798,20 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div>
-          <div style="font-size:16px;font-weight:800;color:var(--text)">🎯 Targets</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">🎯 Targets</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Edit, click Save. Used by GHL preview, Strava push, and £ raised calculation.</div>
         </div>
         <div id="rs-targets-status" style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end">
         <div>
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;display:block;margin-bottom:4px">📅 Days Target</label>
-          <input type="number" id="rs-cfg-days-target" placeholder="5000" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:700">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">📅 Days Target</label>
+          <input type="number" id="rs-cfg-days-target" placeholder="5000" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:600">
           <div style="font-size:10px;color:var(--muted);margin-top:3px">Used in "Day #N/X" preview</div>
         </div>
         <div>
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;display:block;margin-bottom:4px">💰 Baseline Raised (£)</label>
-          <input type="number" step="0.01" id="rs-cfg-baseline-raised" placeholder="70000" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:700">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">💰 Baseline Raised (£)</label>
+          <input type="number" step="0.01" id="rs-cfg-baseline-raised" placeholder="70000" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:600">
           <div style="font-size:10px;color:var(--muted);margin-top:3px">Added to Stripe lifetime gross</div>
         </div>
         <button onclick="rsSaveTargets()" class="btn btn-secondary btn-sm" style="padding:8px 16px;height:38px">💾 Save</button>
@@ -821,7 +822,7 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
-          <div style="font-size:16px;font-weight:800;color:var(--text)">📊 Today's Update</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">📊 Today's Update</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Edit values as needed, then Push to GHL</div>
         </div>
         <button onclick="rsFetchLatestRun()" class="btn btn-secondary btn-sm">🟠 Fetch latest Strava run</button>
@@ -832,25 +833,25 @@
       <!-- Editable values grid -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
         <div>
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;display:block;margin-bottom:4px">📅 Day #</label>
-          <input type="number" id="rs-day" placeholder="2145" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:700">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">📅 Day #</label>
+          <input type="number" id="rs-day" placeholder="2145" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:600">
           <div style="font-size:10px;color:var(--muted);margin-top:3px">Auto-increments daily, editable</div>
         </div>
         <div>
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;display:block;margin-bottom:4px">🏃 Total Distance (km)</label>
-          <input type="number" step="0.01" id="rs-km" placeholder="16477.04" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:700">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">🏃 Total Distance (km)</label>
+          <input type="number" step="0.01" id="rs-km" placeholder="16477.04" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:600">
           <div style="font-size:10px;color:var(--muted);margin-top:3px">From Strava, editable</div>
         </div>
         <div>
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;display:block;margin-bottom:4px">💰 Total Raised (£)</label>
-          <input type="number" step="0.01" id="rs-raised" placeholder="40563" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:700">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">💰 Total Raised (£)</label>
+          <input type="number" step="0.01" id="rs-raised" placeholder="40563" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;font-weight:600">
           <div style="font-size:10px;color:var(--muted);margin-top:3px">Baseline + Stripe lifetime gross</div>
         </div>
       </div>
 
       <!-- Preview of formatted activity title -->
       <div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted);line-height:1.7">
-        <div style="font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px">📝 Formatted Strava Activity Title (preview)</div>
+        <div style="font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px">📝 Formatted Strava Activity Title (preview)</div>
         <div id="rs-preview" style="color:var(--text);white-space:pre-wrap">Day #— /5000 #runpreneurchallenge
 Total raised so far £—/£1,000,000
 Total distance so far —/40,075km</div>
@@ -867,7 +868,7 @@ Total distance so far —/40,075km</div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
-          <div style="font-size:16px;font-weight:800;color:var(--text)">🗂️ GHL Custom Values</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">🗂️ GHL Custom Values</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Live from your GHL location · click 🔄 to refresh</div>
         </div>
         <button onclick="rsGhlListValues()" class="btn btn-secondary btn-sm">🔄 Refresh list</button>
@@ -887,10 +888,10 @@ Total distance so far —/40,075km</div>
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="font-size:20px;line-height:1;margin-top:1px">⚠️</div>
         <div>
-          <div style="font-size:12px;font-weight:700;color:#8A6B2D;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">What this tool can and cannot do vs Insta360 Studio</div>
+          <div style="font-size:12px;font-weight:600;color:#8A6B2D;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">What this tool can and cannot do vs Insta360 Studio</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:11px;line-height:1.7">
             <div>
-              <div style="font-weight:700;color:var(--green);margin-bottom:3px">✅ What it CAN do</div>
+              <div style="font-weight:600;color:var(--green);margin-bottom:3px">✅ What it CAN do</div>
               <div style="color:var(--muted)">Drag canvas to pan/tilt the 360° view<br>
               MEGA / ULTRA / DEWARP / LINEAR presets<br>
               Pan · Tilt · Roll · FOV sliders<br>
@@ -900,14 +901,14 @@ Total distance so far —/40,075km</div>
               Works on exported flat MP4 files</div>
             </div>
             <div>
-              <div style="font-weight:700;color:var(--red);margin-bottom:3px">❌ What it CANNOT do</div>
+              <div style="font-weight:600;color:var(--red);margin-bottom:3px">❌ What it CANNOT do</div>
               <div style="color:var(--muted)"><strong style="color:var(--text)">No AI subject tracking</strong> — Insta360 Studio's DeepTrack is a proprietary GPU model that auto-centres Kevin on every frame. This requires a native app with GPU access. A browser cannot do this at video speed.<br><br>
               <strong style="color:var(--text)">No raw .insv files</strong> — browser can't decode Insta360's format. Only exported MP4 works.<br><br>
               <strong style="color:var(--text)">No Bezier curves</strong> — Studio interpolates per-frame with smooth curves. This tool uses linear interpolation at 30fps.<br><br>
               <strong style="color:var(--text)">No ProRes output</strong> — browser export caps at ~8 Mbps. Studio can do 200+ Mbps ProRes.</div>
             </div>
           </div>
-          <div style="margin-top:10px;padding:8px 12px;background:#F7EFD9;border-radius:6px;font-size:11px;color:#8A6B2D;font-weight:700">
+          <div style="margin-top:10px;padding:8px 12px;background:#F7EFD9;border-radius:6px;font-size:11px;color:#8A6B2D;font-weight:600">
             👉 Recommendation: Use <strong>Insta360 Studio</strong> (free at insta360.com/download) for the reframe step — it auto-centres Kevin properly. Export a flat MP4, then bring it here for the rest of the workflow.
           </div>
         </div>
@@ -917,11 +918,11 @@ Total distance so far —/40,075km</div>
       <!-- Active Episode Banner -->
       <div id="insta360-ep-banner" style="display:none;background:rgba(44,110,73,.10);border:1px solid #C4D6C8;border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px">Active Episode</div>
-          <div id="insta360-ep-name" style="font-size:13px;font-weight:700;color:var(--text)">—</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px">Active Episode</div>
+          <div id="insta360-ep-name" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button id="insta360-save-url-btn" onclick="i3SaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;white-space:nowrap">
+          <button id="insta360-save-url-btn" onclick="i3SaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap">
             💾 Save URL to Airtable
           </button>
           <button onclick="cmClearActiveEp()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif">✕</button>
@@ -937,7 +938,7 @@ Total distance so far —/40,075km</div>
 
         <!-- Upload -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">📂 Upload 360° Video</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">📂 Upload 360° Video</div>
           <div id="i3-drop" onclick="document.getElementById('i3-file').click()"
             style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s">
             <div style="font-size:22px;margin-bottom:4px">🌐</div>
@@ -951,23 +952,23 @@ Total distance so far —/40,075km</div>
         <!-- View Angle Gear — matches Insta360 Studio layout -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700">⚙️ View Angle Gear</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600">⚙️ View Angle Gear</div>
             <button onclick="i3ResetAngle()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:5px;cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif">↺ Reset</button>
           </div>
 
           <!-- Lens mode presets (matches Insta360 Studio) -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:12px">
-            <button onclick="i3SetMode('mega')" id="i3-mode-mega" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">MEGA</button>
-            <button onclick="i3SetMode('ultra')" id="i3-mode-ultra" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--accent);color:white">ULTRA</button>
-            <button onclick="i3SetMode('dewarp')" id="i3-mode-dewarp" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">DEWARP</button>
-            <button onclick="i3SetMode('linear')" id="i3-mode-linear" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">LINEAR</button>
+            <button onclick="i3SetMode('mega')" id="i3-mode-mega" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:600;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">MEGA</button>
+            <button onclick="i3SetMode('ultra')" id="i3-mode-ultra" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:600;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--accent);color:white">ULTRA</button>
+            <button onclick="i3SetMode('dewarp')" id="i3-mode-dewarp" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:600;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">DEWARP</button>
+            <button onclick="i3SetMode('linear')" id="i3-mode-linear" class="i3-mode-btn" style="padding:5px 2px;font-size:9px;font-weight:600;border-radius:5px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--bg);color:var(--muted)">LINEAR</button>
           </div>
 
           <!-- Pan slider -->
           <div style="margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;margin-bottom:3px">
               <label style="font-size:11px;color:var(--muted)">⟺ Pan (left/right)</label>
-              <span id="i3-pan-val" style="font-size:11px;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:700">0.0°</span>
+              <span id="i3-pan-val" style="font-size:11px;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:600">0.0°</span>
             </div>
             <input type="range" id="i3-pan" min="-360" max="360" value="0" step="0.1"
               style="width:100%;accent-color:var(--accent)" oninput="i3SliderChange()">
@@ -977,7 +978,7 @@ Total distance so far —/40,075km</div>
           <div style="margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;margin-bottom:3px">
               <label style="font-size:11px;color:var(--muted)">⟸ Tilt (up/down)</label>
-              <span id="i3-tilt-val" style="font-size:11px;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:700">0.0°</span>
+              <span id="i3-tilt-val" style="font-size:11px;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:600">0.0°</span>
             </div>
             <input type="range" id="i3-tilt" min="-90" max="90" value="0" step="0.1"
               style="width:100%;accent-color:var(--accent)" oninput="i3SliderChange()">
@@ -1006,9 +1007,9 @@ Total distance so far —/40,075km</div>
 
         <!-- Keyframe controls -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:10px">🔑 Keyframes</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:10px">🔑 Keyframes</div>
           <button id="i3-add-kf-btn" onclick="i3AddKeyframe()" disabled
-            style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:8px">
+            style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:8px">
             + Add Keyframe at Current Time
           </button>
           <div id="i3-kf-list" style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;max-height:120px;overflow-y:auto;line-height:2"></div>
@@ -1031,7 +1032,7 @@ Total distance so far —/40,075km</div>
           </div>
         </div>
         <div id="i3-dl-ready" style="display:none;padding:10px 14px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span id="i3-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:700"></span>
+          <span id="i3-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:600"></span>
           <button class="btn btn-secondary btn-sm" onclick="i3DlAgain()">↓ Again</button>
         </div>
 
@@ -1040,7 +1041,7 @@ Total distance so far —/40,075km</div>
       <!-- RIGHT: Canvas + timeline -->
       <div style="position:sticky;top:80px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Live View — drag to reframe</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Live View — drag to reframe</div>
           <div id="i3-phase" style="font-size:11px;font-family:'DM Sans',sans-serif;color:var(--muted)"></div>
         </div>
 
@@ -1078,11 +1079,11 @@ Total distance so far —/40,075km</div>
       <!-- Active Episode Banner -->
       <div id="intro-editor-ep-banner" style="display:none;background:rgba(44,110,73,.10);border:1px solid #C4D6C8;border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px">Active Episode</div>
-          <div id="intro-editor-ep-name" style="font-size:13px;font-weight:700;color:var(--text)">—</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px">Active Episode</div>
+          <div id="intro-editor-ep-name" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button id="intro-editor-save-url-btn" onclick="ieSaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;white-space:nowrap">
+          <button id="intro-editor-save-url-btn" onclick="ieSaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap">
             💾 Save URL to Airtable
           </button>
           <button onclick="cmClearActiveEp()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif">✕</button>
@@ -1098,7 +1099,7 @@ Total distance so far —/40,075km</div>
 
         <!-- How it works -->
         <div style="background:rgba(44,110,73,.10);border:1px solid #C4D6C8;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7">
-          <div style="font-weight:700;color:var(--accent);margin-bottom:4px">How it works</div>
+          <div style="font-weight:600;color:var(--accent);margin-bottom:4px">How it works</div>
           1. Upload Kevin's main video<br>
           2. Play it — click <strong style="color:var(--text)">📍 Mark Insert Point</strong> when you want the intro to appear<br>
           3. Preview plays: Part 1 → Intro → Part 2<br>
@@ -1107,11 +1108,11 @@ Total distance so far —/40,075km</div>
 
         <!-- Intro clip (saved) -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">🎬 Intro Clip</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">🎬 Intro Clip</div>
           <div id="ie-intro-saved" style="display:none;padding:8px 10px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:7px;margin-bottom:8px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
               <div>
-                <div style="font-size:12px;color:var(--green);font-weight:700">✓ Saved in browser</div>
+                <div style="font-size:12px;color:var(--green);font-weight:600">✓ Saved in browser</div>
                 <div id="ie-intro-saved-name" style="font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-top:1px"></div>
               </div>
               <button onclick="ieClearIntro()" style="background:none;border:1px solid #D9B8B8;color:var(--red);padding:3px 8px;border-radius:5px;cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif">✕ Clear</button>
@@ -1129,33 +1130,33 @@ Total distance so far —/40,075km</div>
 
         <!-- Main video -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px">🎥 Kevin's Main Video</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px">🎥 Kevin's Main Video</div>
           <div id="ie-main-drop" onclick="document.getElementById('ie-main-input').click()"
             style="border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s">
             <div style="font-size:20px;margin-bottom:3px">🎥</div>
             <div style="font-size:11px;color:var(--muted)">Drop main video or click to browse</div>
             <div id="ie-main-info" style="font-size:10px;color:var(--cyan);margin-top:4px;display:none;font-family:'DM Sans',sans-serif"></div>
     <div id="ie-trans-wrap" style="display:none;margin-top:12px;background:#DCE5F2;border:1px solid #C0CFE3;border-radius:10px;padding:14px">
-      <div style="font-size:11px;font-weight:700;color:#3560A8;margin-bottom:10px">🎤 Auto-Transcription</div>
+      <div style="font-size:11px;font-weight:600;color:#3560A8;margin-bottom:10px">🎤 Auto-Transcription</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">GEMINI KEY <span id="ie-gem-status-dot" style="color:var(--muted)">●</span></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px">GEMINI KEY <span id="ie-gem-status-dot" style="color:var(--muted)">●</span></label>
           <input type="password" id="ie-gem-key" placeholder="AIza..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('cm_gemini_key',this.value);ieUpdateKeyDots()">
         </div>
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">OPENAI KEY (Whisper) <span id="ie-oai-status-dot" style="color:var(--muted)">●</span></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px">OPENAI KEY (Whisper) <span id="ie-oai-status-dot" style="color:var(--muted)">●</span></label>
           <input type="password" id="ie-oai-key" placeholder="sk-..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('cm_openai_key',this.value);ieUpdateKeyDots()">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div id="ie-trans-status" style="flex:1;font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif"></div>
-        <button onclick="ieTriggerTranscription()" id="ie-trans-btn" style="background:#2C6E49;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">▶ Transcribe</button>
+        <button onclick="ieTriggerTranscription()" id="ie-trans-btn" style="background:#2C6E49;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">▶ Transcribe</button>
       </div>
       <textarea id="ie-trans-result" rows="5" placeholder="Transcript appears here..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;resize:vertical;outline:none;display:none"></textarea>
       <div id="ie-trans-save-row" style="display:none;margin-top:6px;flex-wrap:wrap;gap:6px">
-        <button onclick="ieSaveTranscript()" style="background:#DDE8DF;border:1px solid #C4D6C8;color:var(--green);padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">Save Transcript to Airtable</button>
-        <button onclick="ieDownloadTranscriptTxt()" style="background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">⬇ Download .txt</button>
-        <button id="ie-ai-titles-btn" onclick="ieAiSuggestTitles()" style="background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">✨ AI Suggest Titles</button>
+        <button onclick="ieSaveTranscript()" style="background:#DDE8DF;border:1px solid #C4D6C8;color:var(--green);padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">Save Transcript to Airtable</button>
+        <button onclick="ieDownloadTranscriptTxt()" style="background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">⬇ Download .txt</button>
+        <button id="ie-ai-titles-btn" onclick="ieAiSuggestTitles()" style="background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">✨ AI Suggest Titles</button>
       </div>
       <div id="ie-title-suggestions" style="display:none;margin-top:8px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px">
         <div style="font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-bottom:6px">📌 Select to copy · 📋 to clipboard · Apply ✓ to save + update Content Name</div>
@@ -1170,7 +1171,7 @@ Total distance so far —/40,075km</div>
 
         <!-- Insert point -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:10px">📍 Insert Point</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:10px">📍 Insert Point</div>
           <button id="ie-mark-btn" class="btn btn-secondary" onclick="ieMarkInsert()" disabled
             style="width:100%;font-size:13px;padding:10px;margin-bottom:8px;border-color:#C4D6C8;color:var(--accent)">
             📍 Mark Insert Point at Current Time
@@ -1190,7 +1191,7 @@ Total distance so far —/40,075km</div>
 
         <!-- Output resolution -->
         <div style="margin-bottom:12px">
-          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Output Resolution</label>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Output Resolution</label>
           <select id="ie-resolution" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:12px;outline:none">
             <option value="1920x1080">1920×1080 (Full HD)</option>
             <option value="1280x720" selected>1280×720 (HD)</option>
@@ -1199,18 +1200,18 @@ Total distance so far —/40,075km</div>
 
         <!-- Optional: Burn subtitles into export -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;font-weight:700">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;font-weight:600">
             <input type="checkbox" id="ie-sub-toggle" onchange="ieSubToggle()" style="width:16px;height:16px;cursor:pointer">
             <span style="color:var(--text)">💬 Burn subtitles into export</span>
           </label>
           <div id="ie-sub-panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
             <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5">Transcribe Kevin's audio first. Subtitles will overlay during the main video portion (not the intro).</div>
-            <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Gemini API Key (Primary)</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Gemini API Key (Primary)</div>
             <input type="password" id="ie-gemini-key" placeholder="AIza... (auto-saved)"
               style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;outline:none;margin-bottom:6px"
               oninput="localStorage.setItem('cm_gemini_key',this.value)">
             <button id="ie-transcribe-btn" onclick="ieTranscribeForSubtitles()"
-              style="width:100%;background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:6px">
+              style="width:100%;background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:6px">
               ✨ Transcribe via Gemini
             </button>
             <div id="ie-sub-status" style="font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;min-height:14px;line-height:1.4"></div>
@@ -1254,7 +1255,7 @@ Total distance so far —/40,075km</div>
           <div style="font-size:10px;color:var(--muted);margin-top:5px">Do not close this tab</div>
         </div>
         <div id="ie-dl-ready" style="display:none;padding:10px 14px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span id="ie-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:700"></span>
+          <span id="ie-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:600"></span>
           <button class="btn btn-secondary btn-sm" onclick="ieDlAgain()">↓ Again</button>
         </div>
 
@@ -1263,7 +1264,7 @@ Total distance so far —/40,075km</div>
       <!-- RIGHT: Video player + timeline -->
       <div style="position:sticky;top:80px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Preview</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Preview</div>
           <div id="ie-phase-badge" style="font-size:11px;font-family:'DM Sans',sans-serif;color:var(--muted)"></div>
         </div>
 
@@ -1280,7 +1281,7 @@ Total distance so far —/40,075km</div>
             <div id="ie-scrub-fill" style="height:100%;background:var(--blue);border-radius:3px;width:0%;pointer-events:none"></div>
             <!-- Insert point marker -->
             <div id="ie-insert-marker" style="display:none;position:absolute;top:-5px;width:3px;height:16px;background:var(--accent);border-radius:2px;transform:translateX(-50%);pointer-events:none">
-              <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:var(--accent);font-weight:700">📍</div>
+              <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:var(--accent);font-weight:600">📍</div>
             </div>
           </div>
           <!-- Time display -->
@@ -1310,11 +1311,11 @@ Total distance so far —/40,075km</div>
       <!-- Active Episode Banner -->
       <div id="summary-maker-ep-banner" style="display:none;background:rgba(44,110,73,.10);border:1px solid #C4D6C8;border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px">Active Episode</div>
-          <div id="summary-maker-ep-name" style="font-size:13px;font-weight:700;color:var(--text)">—</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px">Active Episode</div>
+          <div id="summary-maker-ep-name" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button id="summary-maker-save-url-btn" onclick="smSaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;white-space:nowrap">
+          <button id="summary-maker-save-url-btn" onclick="smSaveUrlToAt()" style="display:none;background:var(--green);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap">
             💾 Save URL to Airtable
           </button>
           <button onclick="cmClearActiveEp()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif">✕</button>
@@ -1331,39 +1332,39 @@ Total distance so far —/40,075km</div>
         <div id="sm-drop" onclick="document.getElementById('sm-file-input').click()"
           style="border:2px dashed var(--border);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);margin-bottom:16px">
           <div style="font-size:36px;margin-bottom:10px">🎥</div>
-          <div style="font-weight:700;color:var(--text);margin-bottom:5px">Drop your running video here</div>
+          <div style="font-weight:600;color:var(--text);margin-bottom:5px">Drop your running video here</div>
           <div style="font-size:12px;color:var(--muted)">.mp4 · .mov · .webm · any resolution</div>
           <div id="sm-file-info" style="margin-top:10px;font-size:11px;color:var(--cyan);font-family:'DM Sans',sans-serif;display:none;line-height:1.5"></div>
         </div>
         <input type="file" id="sm-file-input" accept="video/*" style="display:none">
         <video id="sm-video" style="display:none" crossorigin="anonymous" muted playsinline loop></video>
         <div id="sm-trans-wrap" style="display:none;margin-top:12px;background:#DCE5F2;border:1px solid #C0CFE3;border-radius:10px;padding:14px">
-      <div style="font-size:11px;font-weight:700;color:#3560A8;margin-bottom:10px">🎤 Auto-Transcription</div>
+      <div style="font-size:11px;font-weight:600;color:#3560A8;margin-bottom:10px">🎤 Auto-Transcription</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">GEMINI KEY <span id="sm-gem-status-dot" style="color:var(--muted)">●</span></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px">GEMINI KEY <span id="sm-gem-status-dot" style="color:var(--muted)">●</span></label>
           <input type="password" id="sm-gem-key" placeholder="AIza..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('cm_gemini_key',this.value);smUpdateKeyDots()">
         </div>
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">OPENAI KEY (Whisper) <span id="sm-oai-status-dot" style="color:var(--muted)">●</span></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px">OPENAI KEY (Whisper) <span id="sm-oai-status-dot" style="color:var(--muted)">●</span></label>
           <input type="password" id="sm-oai-key" placeholder="sk-..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none" oninput="localStorage.setItem('cm_openai_key',this.value);smUpdateKeyDots()">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div id="sm-trans-status" style="flex:1;font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif"></div>
-        <button onclick="smTriggerTranscription()" id="sm-trans-btn" style="background:#2C6E49;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">▶ Transcribe</button>
+        <button onclick="smTriggerTranscription()" id="sm-trans-btn" style="background:#2C6E49;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">▶ Transcribe</button>
       </div>
       <textarea id="sm-trans-result" rows="5" placeholder="Transcript appears here..." style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;resize:vertical;outline:none;display:none"></textarea>
       <div id="sm-trans-save-row" style="display:none;margin-top:6px;flex-wrap:wrap;gap:6px">
-        <button onclick="smSaveTranscript()" style="background:#DDE8DF;border:1px solid #C4D6C8;color:var(--green);padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">Save Transcript to Airtable</button>
-        <button onclick="downloadTranscriptTxt('sm')" style="background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">⬇ Download .txt</button>
+        <button onclick="smSaveTranscript()" style="background:#DDE8DF;border:1px solid #C4D6C8;color:var(--green);padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">Save Transcript to Airtable</button>
+        <button onclick="downloadTranscriptTxt('sm')" style="background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:4px 12px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer">⬇ Download .txt</button>
       </div>
     </div>
 
         <!-- Episode details -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700">Episode Details</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600">Episode Details</div>
             <button id="sm-ai-btn" onclick="smAiTitles()" class="btn btn-secondary btn-sm" style="border-color:#D8CCE6;color:#6B4F8E;font-size:11px;padding:4px 10px">✨ AI Suggest Titles</button>
           </div>
           <div id="sm-ai-status" style="display:none;font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-bottom:8px"></div>
@@ -1403,7 +1404,7 @@ Total distance so far —/40,075km</div>
 
         <!-- Download ready -->
         <div id="sm-dl-ready" style="display:none;margin-top:12px;padding:12px 16px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span id="sm-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:700"></span>
+          <span id="sm-dl-size" style="font-size:12px;color:var(--green);font-family:'DM Sans',sans-serif;font-weight:600"></span>
           <button class="btn btn-secondary btn-sm" onclick="smDownloadAgain()">↓ Download Again</button>
         </div>
 
@@ -1411,7 +1412,7 @@ Total distance so far —/40,075km</div>
 
       <!-- RIGHT: Live preview — 9:16 portrait -->
       <div style="position:sticky;top:80px">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:10px">
           Preview — 1080×1920 output
         </div>
         <canvas id="sm-preview"
@@ -1502,9 +1503,9 @@ Total distance so far —/40,075km</div>
     </div>
     <hr class="drawer-divider">
     <div id="drawer-add-extra-wrap" style="display:none;margin-bottom:14px;padding:10px 12px;background:#ECE6F3;border:1px solid #D8CCE6;border-radius:8px">
-      <div style="font-size:11px;color:#6B4F8E;font-weight:700;margin-bottom:6px">📋 Generate matching content types</div>
+      <div style="font-size:11px;color:#6B4F8E;font-weight:600;margin-bottom:6px">📋 Generate matching content types</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5">Auto-create a Short Form (Summary) and an LFMD record for this episode using the same number, raw link and pub date.</div>
-      <button id="drawer-add-extra-btn" onclick="drAddSummaryAndLfmd()" style="width:100%;background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Summary + LFMD records</button>
+      <button id="drawer-add-extra-btn" onclick="drAddSummaryAndLfmd()" style="width:100%;background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add Summary + LFMD records</button>
     </div>
     <div class="form-group"><label>Transcription</label><textarea id="dr-description" rows="5" placeholder="Paste transcript link or transcript text here..."></textarea></div>
   </div>
@@ -1839,7 +1840,7 @@ function showAiKeyScreen(errorMsg) {
   o.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(28,36,34,.55)';
   o.innerHTML = `
     <div style="background:#FBFBF9;border:1px solid #DDE1D9;border-radius:14px;padding:36px;max-width:500px;width:92%;box-sizing:border-box;font-family:'DM Sans',sans-serif">
-      <div style="font-size:22px;font-weight:800;color:#1C2422;margin-bottom:6px;font-family:'DM Sans',sans-serif">✨ AI Content Generator</div>
+      <div style="font-size:22px;font-weight:700;color:#1C2422;margin-bottom:6px;font-family:'DM Sans',sans-serif">✨ AI Content Generator</div>
       <div style="color:#5A6660;font-size:13px;margin-bottom:20px;line-height:1.6">Enter your Anthropic API key and Cloudflare Worker proxy URL.</div>
       ${errorMsg ? `<div style="background:#EED9D9;border:1px solid #D9B8B8;border-radius:7px;padding:12px 14px;color:#A33B3B;font-size:12px;margin-bottom:16px;line-height:1.5">⚠ ${errorMsg}</div>` : ''}
       <label style="font-size:11px;color:#5A6660;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Anthropic API Key *</label>
@@ -1856,9 +1857,9 @@ function showAiKeyScreen(errorMsg) {
       <div style="font-size:11px;color:#8A928C;margin-bottom:20px">Get at <a href="https://buffer.com/developers" target="_blank" style="color:#2C6E49;text-decoration:none">buffer.com/developers</a> → Settings → Generate API Key (free plan works)</div>
       <div style="display:flex;gap:10px">
         <button onclick="document.getElementById('ai-key-overlay').remove()"
-          style="flex:0 0 auto;background:none;color:#5A6660;border:1px solid #DDE1D9;border-radius:7px;padding:12px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
+          style="flex:0 0 auto;background:none;color:#5A6660;border:1px solid #DDE1D9;border-radius:7px;padding:12px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
         <button onclick="saveAiKey()"
-          style="flex:1;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Save →</button>
+          style="flex:1;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Save →</button>
       </div>
     </div>`;
   document.body.appendChild(o);
@@ -1891,7 +1892,7 @@ function showConnectScreen(errorMsg) {
   o.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(28,36,34,.55)';
   o.innerHTML = `
     <div style="background:#FBFBF9;border:1px solid #DDE1D9;border-radius:14px;padding:40px 36px;max-width:460px;width:92%;box-sizing:border-box;font-family:'DM Sans',sans-serif;box-shadow:0 12px 32px rgba(28,36,34,.18)">
-      <div style="font-size:24px;font-weight:800;color:#1C2422;margin-bottom:6px;font-family:'DM Sans',sans-serif">⚙️ Content Machine</div>
+      <div style="font-size:24px;font-weight:700;color:#1C2422;margin-bottom:6px;font-family:'DM Sans',sans-serif">⚙️ Content Machine</div>
       <div style="color:#5A6660;font-size:13px;margin-bottom:24px;line-height:1.6">Connect to your Airtable base to load live data.</div>
       ${errorMsg ? `<div style="background:#EED9D9;border:1px solid #D9B8B8;border-radius:7px;padding:12px 14px;color:#A33B3B;font-size:12px;margin-bottom:16px;line-height:1.5">⚠ ${errorMsg}</div>` : ''}
       <label style="font-size:11px;color:#5A6660;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Airtable Personal Access Token</label>
@@ -1903,7 +1904,7 @@ function showConnectScreen(errorMsg) {
         Base: <strong style="color:#5A6660">Operations Director</strong>
       </div>
       <button id="cm-connect-btn" onclick="attemptConnect()"
-        style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
+        style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
         Connect to Airtable →
       </button>
     </div>`;
@@ -2505,9 +2506,9 @@ function renderEditingPage() {
         <td onclick="event.stopPropagation()" style="white-space:nowrap">
           <button class="btn-edit" onclick="openEditDrawer('${r.id}')">✏ Edit</button>
           <button class="btn-del" onclick="deletePanelRecord('${r.id}')">🗑</button>
-          <button onclick="cmSetActiveEpisode('${r.id}', encodeURIComponent(fv(r,'name')||'Episode'))" title="Set as active episode" style="background:rgba(44,110,73,.10);border:1px solid #C4D6C8;color:var(--accent);padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;font-family:'DM Sans',sans-serif;margin-left:4px">📌</button>
-          <button onclick="acStart('${r.id}')" title="🤖 Full Chain — navigates + runs AI + saves (8-10 min hands-on)" style="background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;font-family:'DM Sans',sans-serif;margin-left:4px">🤖</button>
-          <button onclick="aoStart('${r.id}')" title="⚡ AI-Only — text-only steps, fully unattended (~2 min)" style="background:#F7EFD9;border:1px solid #E0CDA4;color:#8A6B2D;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;font-family:'DM Sans',sans-serif;margin-left:4px">⚡</button>
+          <button onclick="cmSetActiveEpisode('${r.id}', encodeURIComponent(fv(r,'name')||'Episode'))" title="Set as active episode" style="background:rgba(44,110,73,.10);border:1px solid #C4D6C8;color:var(--accent);padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif;margin-left:4px">📌</button>
+          <button onclick="acStart('${r.id}')" title="🤖 Full Chain — navigates + runs AI + saves (8-10 min hands-on)" style="background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif;margin-left:4px">🤖</button>
+          <button onclick="aoStart('${r.id}')" title="⚡ AI-Only — text-only steps, fully unattended (~2 min)" style="background:#F7EFD9;border:1px solid #E0CDA4;color:#8A6B2D;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif;margin-left:4px">⚡</button>
         </td>
       </tr>`;
     }).join('')}</tbody>
@@ -3331,7 +3332,7 @@ function acSetState(s){
     #ac-panel{position:fixed;bottom:20px;right:20px;width:400px;max-height:80vh;background:var(--surface);border:1px solid #D8CCE6;border-radius:12px;box-shadow:0 12px 40px rgba(28,36,34,.16);z-index:9998;font-family:'DM Sans',sans-serif;display:none;flex-direction:column}
     #ac-panel.open{display:flex}
     .ac-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;background:#ECE6F3;border-radius:12px 12px 0 0}
-    .ac-title{font-size:13px;font-weight:800;color:#6B4F8E}
+    .ac-title{font-size:13px;font-weight:700;color:#6B4F8E}
     .ac-ep{font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
     .ac-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px}
     .ac-close:hover{color:var(--text)}
@@ -3339,7 +3340,7 @@ function acSetState(s){
     .ac-step{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.05);font-size:12px}
     .ac-step:last-child{border-bottom:none}
     .ac-step-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
-    .ac-step-name{font-weight:700;color:var(--text)}
+    .ac-step-name{font-weight:600;color:var(--text)}
     .ac-step-status{font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-top:2px}
     .ac-step.done .ac-step-name{color:var(--green);text-decoration:line-through;opacity:.7}
     .ac-step.done .ac-step-icon{opacity:.5}
@@ -3348,7 +3349,7 @@ function acSetState(s){
     .ac-url-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;margin-top:8px;box-sizing:border-box;outline:none}
     .ac-url-input:focus{border-color:#6B4F8E}
     .ac-actions{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
-    .ac-actions button{flex:1;min-width:90px;padding:8px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--surface2);color:var(--text)}
+    .ac-actions button{flex:1;min-width:90px;padding:8px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border);background:var(--surface2);color:var(--text)}
     .ac-actions .primary{background:#6B4F8E;border-color:#6B4F8E;color:#fff}
     .ac-actions .skip{background:#F7EFD9;border-color:#E0CDA4;color:#8A6B2D}
     .ac-actions button:hover{opacity:.85}
@@ -3712,7 +3713,7 @@ function aoRender(){
   panel.innerHTML = `
     <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#F7EFD9;border-radius:12px 12px 0 0">
       <div>
-        <div style="font-size:13px;font-weight:800;color:#8A6B2D">⚡ AI-Only Chain</div>
+        <div style="font-size:13px;font-weight:700;color:#8A6B2D">⚡ AI-Only Chain</div>
         <div style="font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-top:2px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${epName}">${epName}</div>
       </div>
       <button onclick="aoCancel()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px">×</button>
@@ -3728,16 +3729,16 @@ function aoRender(){
         return `<div style="padding:10px 0;border-bottom:1px dashed rgba(255,255,255,.05);font-size:12px">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:14px;${isDone?'':'opacity:.4'}">${isDone?'✓':s.emoji}</span>
-            <span style="font-weight:700;color:${isDone?'var(--green)':isActive?'#8A6B2D':'var(--muted)'};${isDone?'text-decoration:line-through':''}">${s.name}</span>
+            <span style="font-weight:600;color:${isDone?'var(--green)':isActive?'#8A6B2D':'var(--muted)'};${isDone?'text-decoration:line-through':''}">${s.name}</span>
             ${isActive?'<span style="font-size:10px;color:#8A6B2D;font-family:\'DM Mono\',monospace">⟳ running…</span>':''}
           </div>
           ${result ? `<div style="margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:6px;font-size:11px;color:var(--text);font-family:'DM Sans',sans-serif;white-space:pre-wrap;max-height:120px;overflow-y:auto">${escapeHtml(typeof result==='string'?result:JSON.stringify(result,null,2))}</div>` : ''}
         </div>`;
       }).join('')}
-      ${complete ? `<div style="margin-top:12px;padding:10px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:7px;font-size:12px;color:var(--green);font-weight:700;text-align:center">✅ Chain complete — review outputs on the record</div>` : ''}
+      ${complete ? `<div style="margin-top:12px;padding:10px;background:#DDE8DF;border:1px solid #C4D6C8;border-radius:7px;font-size:12px;color:var(--green);font-weight:600;text-align:center">✅ Chain complete — review outputs on the record</div>` : ''}
     </div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:rgba(0,0,0,.2);border-radius:0 0 12px 12px">
-      ${complete ? `<button onclick="aoCancel()" style="padding:8px 16px;background:#2C6E49;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">✓ Close</button>` : `<button onclick="aoCancel()" style="padding:8px 14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Stop</button>`}
+      ${complete ? `<button onclick="aoCancel()" style="padding:8px 16px;background:#2C6E49;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">✓ Close</button>` : `<button onclick="aoCancel()" style="padding:8px 14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Stop</button>`}
     </div>
   `;
   panel.classList.add('open');
@@ -5360,10 +5361,10 @@ function renderAiUsagePanel() {
     </div>
     <!-- Session summary -->
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-      <div style="font-size:12px;font-weight:700;color:var(--text)">This session:</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text)">This session:</div>
       <div style="font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif">${_aiSessionLog.length} calls</div>
       <div style="font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif">${sessionIn.toLocaleString()} in / ${sessionOut.toLocaleString()} out</div>
-      <div style="font-size:12px;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:700">$${sessionCost.toFixed(4)}</div>
+      <div style="font-size:12px;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:600">$${sessionCost.toFixed(4)}</div>
     </div>
     <!-- Recent calls table -->
     <div style="overflow-x:auto">
@@ -7719,7 +7720,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
           Insta360's native <code style="background:var(--bg);padding:2px 5px;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:11px">.insv</code> format uses a proprietary codec that requires their desktop app or GPU drivers to decode. Browsers can't read it.
         </div>
         <div style="background:#DDE8DF;border:1px solid #C4D6C8;border-radius:8px;padding:12px 14px;margin-bottom:14px">
-          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">✓ How to use this tool</div>
+          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">✓ How to use this tool</div>
           <ol style="margin:0;padding-left:20px;font-size:12px;line-height:1.7;color:var(--text)">
             <li>Open the <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:10px">.insv</code> file in <strong>Insta360 Studio</strong> (free desktop app)</li>
             <li>Export it as a flat MP4 (any aspect ratio works — dual-fisheye or equirectangular auto-detected)</li>
@@ -7730,7 +7731,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
           <strong>Alternative:</strong> if your camera also wrote a <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:10px">.lrv</code> proxy alongside the .insv, rename it to <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:10px">.mp4</code> and drop that — lower resolution but works in browser.
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button onclick="this.closest('div[style*=\\'position:fixed\\']').remove()" style="background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Got it</button>
+          <button onclick="this.closest('div[style*=\\'position:fixed\\']').remove()" style="background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Got it</button>
         </div>`;
       overlay.appendChild(modal);
       document.body.appendChild(overlay);
@@ -17657,7 +17658,7 @@ function appendYtLink(recId) {
         return `<div style="color:#A33B3B">✗ <code>${r.key}</code> — ${escapeHtml(r.error||'?')}</div>`;
       }).join('');
       panel.style.display = 'block';
-      panel.innerHTML = `<div style="font-weight:700;color:#3560A8;margin-bottom:6px">🔷 GHL push results</div>${rowsHtml}<div style="margin-top:6px;font-size:11px;color:var(--muted)">progress_bar = ${progressBar}</div>`;
+      panel.innerHTML = `<div style="font-weight:600;color:#3560A8;margin-bottom:6px">🔷 GHL push results</div>${rowsHtml}<div style="margin-top:6px;font-size:11px;color:var(--muted)">progress_bar = ${progressBar}</div>`;
     }
 
     if (okCount === results.length) {
@@ -17875,7 +17876,7 @@ function appendYtLink(recId) {
       if (panel) {
         panel.style.display = 'block';
         panel.innerHTML = `
-          <div style="font-weight:700;color:#fb923c;margin-bottom:4px">🟠 Latest Strava activity</div>
+          <div style="font-weight:600;color:#fb923c;margin-bottom:4px">🟠 Latest Strava activity</div>
           <div>ID: <code>${a.id}</code> · ${escapeHtml(a.name||'')}</div>
           <div>Date: ${new Date(a.start_date_local).toLocaleString('en-GB')}</div>
           <div>Distance: <strong>${km.toFixed(2)} km</strong> · Duration: ${Math.round(a.moving_time/60)} min</div>
@@ -19008,12 +19009,12 @@ async function ieAiSuggestTitles() {
         '<div class="ie-title-row" data-title="' + safe + '" ' +
         'style="display:flex;align-items:flex-start;gap:6px;background:#ECE6F3;border:1px solid #D8CCE6;border-radius:5px;padding:7px 10px;margin-bottom:4px;transition:background 0.15s">' +
           '<div style="flex:1;font-size:12px;font-family:\'DM Sans\',sans-serif;color:var(--text);user-select:text;cursor:text;line-height:1.45">' +
-            '<span style="color:var(--muted);font-weight:700;margin-right:4px">' + (i + 1) + '.</span>' + safe +
+            '<span style="color:var(--muted);font-weight:600;margin-right:4px">' + (i + 1) + '.</span>' + safe +
           '</div>' +
           '<button class="ie-title-copy" data-title="' + safe + '" title="Copy to clipboard" ' +
             'style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);padding:3px 7px;border-radius:4px;font-size:10px;cursor:pointer;font-family:\'DM Sans\',sans-serif;flex-shrink:0">📋</button>' +
           '<button class="ie-title-apply" data-title="' + safe + '" title="Save to Airtable + append to Content Name" ' +
-            'style="background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:3px 9px;border-radius:4px;font-size:10px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:700;flex-shrink:0">Apply ✓</button>' +
+            'style="background:#ECE6F3;border:1px solid #D8CCE6;color:#6B4F8E;padding:3px 9px;border-radius:4px;font-size:10px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;flex-shrink:0">Apply ✓</button>' +
         '</div>'
       );
     }).join('');
@@ -19157,7 +19158,7 @@ function aiWorkflow(recId, encodedName) {
     <div id="wf-step-${i}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div id="wf-icon-${i}" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:2px">⬜</div>
       <div style="flex:1">
-        <div style="font-size:12px;font-weight:700;color:var(--text)">${s.label}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${s.label}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.desc}</div>
         <div id="wf-msg-${i}" style="font-size:11px;color:var(--cyan);font-family:'DM Sans',sans-serif;margin-top:4px;display:none"></div>
       </div>
@@ -19172,7 +19173,7 @@ function aiWorkflow(recId, encodedName) {
   panel.innerHTML = `
     <div style="background:#FBFBF9;border:1px solid #DDE1D9;border-radius:14px;padding:28px;max-width:540px;width:94%;box-sizing:border-box;font-family:'DM Sans',sans-serif;max-height:90vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:18px;font-weight:800;color:#1C2422;font-family:'DM Sans',sans-serif">🤖 AI Workflow</div>
+        <div style="font-size:18px;font-weight:700;color:#1C2422;font-family:'DM Sans',sans-serif">🤖 AI Workflow</div>
         <button onclick="document.getElementById('ai-workflow-panel').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1">✕</button>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${name}</div>
@@ -19181,7 +19182,7 @@ function aiWorkflow(recId, encodedName) {
       <div style="margin-bottom:16px">${stepsHtml}</div>
       <div id="wf-status" style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;min-height:16px;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px">
-        <button id="wf-run-btn" onclick="wfRun()" ${!hasVideo?'disabled':''} style="flex:1;background:#2C6E49;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif${!hasVideo?';opacity:.5':''}">${!hasVideo?'Add Video First':'▶ Start AI Workflow'}</button>
+        <button id="wf-run-btn" onclick="wfRun()" ${!hasVideo?'disabled':''} style="flex:1;background:#2C6E49;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif${!hasVideo?';opacity:.5':''}">${!hasVideo?'Add Video First':'▶ Start AI Workflow'}</button>
         <button onclick="document.getElementById('ai-workflow-panel').remove()" style="background:none;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
       </div>
     </div>`;
@@ -19371,7 +19372,7 @@ function wfShowIntroEditorGuide(pct, epName, recId) {
     const rid = recId;
     const ep = epName.slice(0,40);
     let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
-      '<span style="font-size:12px;font-weight:700;color:#3560A8">🤖 Intro Editor — Step 2 of 5</span>' +
+      '<span style="font-size:12px;font-weight:600;color:#3560A8">🤖 Intro Editor — Step 2 of 5</span>' +
       '<button onclick="document.getElementById(\'wf-guide\').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button>' +
       '</div>' +
       '<div style="display:flex;gap:4px;margin-bottom:12px">' +
@@ -19385,7 +19386,7 @@ function wfShowIntroEditorGuide(pct, epName, recId) {
     if (exported) {
       html += '<div style="background:#DDE8DF;border:1px solid #C4D6C8;border-radius:7px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#2C6E49">✅ Export done! Upload to Google Drive then paste link below.</div>' +
         '<input id="wf-ie-url" type="url" placeholder="Paste Google Drive URL…" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;outline:none;margin-bottom:6px">';
-      html += '<button onclick="wfIEContinue()" style="width:100%;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:10px;font-size:12px;font-weight:700;cursor:pointer">➡ Save URL + Continue to Add Subtitle</button>';
+      html += '<button onclick="wfIEContinue()" style="width:100%;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:10px;font-size:12px;font-weight:600;cursor:pointer">➡ Save URL + Continue to Add Subtitle</button>';
     } else {
       html += '<div style="font-size:11px;color:var(--text);line-height:1.8;margin-bottom:10px">' +
         '<div>1️⃣ Upload episode video from Optimized Video Link</div>' +
@@ -19394,8 +19395,8 @@ function wfShowIntroEditorGuide(pct, epName, recId) {
         '<div>3️⃣ Click <strong>📍 Auto-Mark Insert Point</strong></div>' +
         '<div>4️⃣ Click <strong>🎬 Export Combined Video</strong></div>' +
         '</div>';
-      html += '<button id="wf-automark-btn" onclick="wfAutoMarkInsertPoint(' + pct + ')" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">📍 Auto-Mark Insert Point</button>';
-      html += '<button onclick="wfIEMarkExportedClick()" style="width:100%;background:#DDE8DF;color:#2C6E49;border:1px solid #C4D6C8;border-radius:7px;padding:9px;font-size:11px;font-weight:700;cursor:pointer">✅ Export Done — Click to paste Drive URL</button>';
+      html += '<button id="wf-automark-btn" onclick="wfAutoMarkInsertPoint(' + pct + ')" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">📍 Auto-Mark Insert Point</button>';
+      html += '<button onclick="wfIEMarkExportedClick()" style="width:100%;background:#DDE8DF;color:#2C6E49;border:1px solid #C4D6C8;border-radius:7px;padding:9px;font-size:11px;font-weight:600;cursor:pointer">✅ Export Done — Click to paste Drive URL</button>';
     }
     html += '<div style="font-size:10px;color:var(--muted);margin-top:6px">Episode: ' + ep + '</div>';
     guide.innerHTML = html;
@@ -19530,7 +19531,7 @@ function wfShowSummaryGuide(l1, l2, day, recId, transcript) {
   guide.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9000;background:#FBFBF9;border:1px solid #C0CFE3;border-radius:12px;padding:16px;max-width:350px;font-family:"DM Mono",monospace;box-shadow:0 8px 32px rgba(28,36,34,.16)';
   guide.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:13px;font-weight:700;color:#3560A8">🤖 Summary Maker — Step 1 of 3</span>
+      <span style="font-size:13px;font-weight:600;color:#3560A8">🤖 Summary Maker — Step 1 of 3</span>
     </div>
     <div style="display:flex;gap:4px;margin-bottom:10px">
       <div style="flex:1;height:4px;border-radius:2px;background:#3560A8"></div>
@@ -19554,8 +19555,8 @@ function wfShowSummaryGuide(l1, l2, day, recId, transcript) {
     </div>
     <input id="wf-video-url-input" type="url" placeholder="Paste Google Drive URL of downloaded video…"
       style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;margin-bottom:6px;outline:none">
-    <button onclick="wfSaveVideoUrl('${recId}')" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">💾 Save URL to Airtable + Continue</button>
-    ${transcript ? '<button onclick="wfGoSubtitle(\''+recId+'\')" style="width:100%;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">➡ Skip to Add Subtitle</button>' : '<div style="color:#8A6B2D;font-size:10px;margin-top:4px">⚠ No transcript — subtitle step will be skipped</div>'}`;
+    <button onclick="wfSaveVideoUrl('${recId}')" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">💾 Save URL to Airtable + Continue</button>
+    ${transcript ? '<button onclick="wfGoSubtitle(\''+recId+'\')" style="width:100%;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer">➡ Skip to Add Subtitle</button>' : '<div style="color:#8A6B2D;font-size:10px;margin-top:4px">⚠ No transcript — subtitle step will be skipped</div>'}`;
   document.body.appendChild(guide);
 }
 
@@ -19636,7 +19637,7 @@ function wfShowLFMDGuide(startPct, endPct, recId, transcript) {
   guide.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9000;background:#FBFBF9;border:1px solid #C0CFE3;border-radius:12px;padding:16px;max-width:350px;font-family:"DM Mono",monospace;box-shadow:0 8px 32px rgba(28,36,34,.16)';
   guide.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:13px;font-weight:700;color:#3560A8">🤖 LFMD Maker — Step 1 of 3</span>
+      <span style="font-size:13px;font-weight:600;color:#3560A8">🤖 LFMD Maker — Step 1 of 3</span>
     </div>
     <div style="display:flex;gap:4px;margin-bottom:10px">
       <div style="flex:1;height:4px;border-radius:2px;background:#3560A8"></div>
@@ -19657,10 +19658,10 @@ function wfShowLFMDGuide(startPct, endPct, recId, transcript) {
       <div>3️⃣ Preview → Record → Download</div>
       <div>4️⃣ Paste the Google Drive URL to update Airtable</div>
     </div>
-    <button onclick="wfAutoSetLFMDRange(${startPct},${endPct})" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">📍 Auto-Set Clip Range</button>
+    <button onclick="wfAutoSetLFMDRange(${startPct},${endPct})" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">📍 Auto-Set Clip Range</button>
     <input id="wf-video-url-input" type="url" placeholder="Paste Google Drive URL of downloaded LFMD…"
       style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;margin-bottom:6px;outline:none">
-    <button onclick="wfSaveVideoUrl('${recId}')" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">💾 Save URL + Continue to Subtitles</button>`;
+    <button onclick="wfSaveVideoUrl('${recId}')" style="width:100%;background:#2C6E49;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">💾 Save URL + Continue to Subtitles</button>`;
   document.body.appendChild(guide);
 }
 
@@ -19735,7 +19736,7 @@ function wfShowSubtitleGuide(recId) {
   guide.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9000;background:#FBFBF9;border:1px solid #C0CFE3;border-radius:12px;padding:16px;max-width:350px;font-family:"DM Mono",monospace;box-shadow:0 8px 32px rgba(28,36,34,.16)';
   guide.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:13px;font-weight:700;color:#3560A8">🤖 Add Subtitle — Step 3 of 5</span>
+      <span style="font-size:13px;font-weight:600;color:#3560A8">🤖 Add Subtitle — Step 3 of 5</span>
     </div>
     <div style="display:flex;gap:4px;margin-bottom:10px">
       <div style="flex:1;height:4px;border-radius:2px;background:var(--green)"></div>
@@ -19757,7 +19758,7 @@ function wfShowSubtitleGuide(recId) {
     </div>
     <input id="wf-sub-url-input" type="url" placeholder="Paste Google Drive URL of subtitled video…"
       style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;margin-bottom:6px;outline:none">
-    <button onclick="wfFinish('${recId}')" style="width:100%;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✅ Save & Move to Copywriting</button>`;
+    <button onclick="wfFinish('${recId}')" style="width:100%;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer">✅ Save & Move to Copywriting</button>`;
   document.body.appendChild(guide);
 }
 
@@ -19796,9 +19797,9 @@ window.wfGoThumbnail = function(recId) {
       '3️⃣ Download Thumbnail PNG',
       '4️⃣ Click Done below when finished'
     ];
-    div.innerHTML = '<div style="font-size:13px;font-weight:700;color:#3560A8;margin-bottom:10px">🖼️ Thumbnail Maker</div>' +
+    div.innerHTML = '<div style="font-size:13px;font-weight:600;color:#3560A8;margin-bottom:10px">🖼️ Thumbnail Maker</div>' +
       steps.map(s=>'<div style="font-size:11px;color:var(--text);margin-bottom:4px">'+s+'</div>').join('') +
-      '<button onclick="wfGoToNextStatus(\''+recId+'\')" style="width:100%;margin-top:12px;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✅ Done — Move to Copywriting</button>';
+      '<button onclick="wfGoToNextStatus(\''+recId+'\')" style="width:100%;margin-top:12px;background:#DDE8DF;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer">✅ Done — Move to Copywriting</button>';
     document.body.appendChild(div);
   }, 500);
 };
