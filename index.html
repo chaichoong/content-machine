@@ -7347,9 +7347,9 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
       }
       const mainVid = g('ie-main-vid');
       const activeRecId = localStorage.getItem('cm_active_ep_id') || null;
-      // Gemini first, Whisper fallback — only Whisper supplies word-level timestamps,
-      // so if Gemini works we'll use even-distribution timing (less precise but
-      // free under Pro plan limits).
+      // Gemini first, Whisper fallback. Gemini returns per-phrase timestamps
+      // which the engine snaps onto real speech via VAD analysis of the
+      // waveform; Whisper (fallback) supplies measured word-level timing.
       const plainText = await transcribeAndSave(mainVid, activeRecId, setStatus, gemKey, oaiKey, { timed: true });
       const timed = transcribeAndSave._lastTimedText || '';
       const finalText = timed || plainText || '';
@@ -7372,7 +7372,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
 
       ieSubReady = true;
       const wc = (plainText || '').split(/\s+/).filter(Boolean).length;
-      const accuracy = timed ? '· word-timed' : '· even-distribution timing';
+      const accuracy = timed ? '· speech-aligned timing' : '· even-distribution timing';
       setStatus('✅ ' + wc + ' words ready ' + accuracy + ' · subtitles will burn into export', 'green');
       showToast('Transcript ready — click Export to bake subtitles in', 'success');
     } catch (e) {
@@ -17983,6 +17983,11 @@ async function wavToB64(wavBlob) {
 // Note: gemini-2.0-flash was shut down June 1, 2026 — using 2.5-flash-lite as
 // Google's recommended replacement (same pricing, supported, free tier OK).
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+// Timed (subtitle) transcription uses full Flash — its audio timestamp
+// estimates are substantially more accurate than Lite's, which drifts badly
+// on phrase timing. Automatically falls back to GEMINI_MODEL if Flash is
+// unavailable on this key. Free tier: Flash ~10 req/min (Lite ~15).
+const GEMINI_TIMED_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 async function geminiTranscribeChunk(wavBlob, gemKey) {
@@ -18016,88 +18021,293 @@ async function geminiTranscribeChunk(wavBlob, gemKey) {
   return text;
 }
 
-// ── Gemini TIMED transcription (best-effort SRT-style timestamps) ────────────
-// Asks Gemini to return timestamps for each phrase. Gemini doesn't have access
-// to true audio timing — it estimates based on speech rate. Accuracy depends
-// on Gemini's guesses; we validate and reject obvious errors, then fall back
-// to even-distribution timing within the chunk window when Gemini lies.
+// ── Gemini TIMED transcription (structured JSON timestamps) ──────────────────
+// Asks Gemini for per-phrase timestamps as structured JSON (responseSchema),
+// which is far more reliable to parse than free-text lines. Uses the full
+// Flash model (better audio-timing accuracy than Lite), falling back to
+// GEMINI_MODEL if Flash is unavailable. Validation is per-segment with
+// clamping — bad lines are dropped or repaired individually instead of
+// discarding the whole chunk's timing, so one hallucinated timestamp no
+// longer forces the drift-prone even-distribution fallback.
 //
 // Returns: { text: plainText, segments: [{start, end, text}] | null }
-// segments is null if Gemini's timestamps failed validation — caller should
-// fall back to even-distribution timing within the chunk's time window.
+// segments is null only if NO usable timestamps came back — caller falls
+// back to speech-aware distribution within the chunk's time window.
 async function geminiTranscribeChunkTimed(wavBlob, gemKey, chunkDurationSec) {
   const b64 = await wavToB64(wavBlob);
+  const dur = Math.round(chunkDurationSec * 10) / 10;
   const body = {
     contents: [{ parts: [
       { inlineData: { mimeType: 'audio/wav', data: b64.split(',')[1] } },
       { text:
-        'Transcribe this audio (' + Math.round(chunkDurationSec) + ' seconds) with precise timestamps for each spoken phrase.\n\n' +
-        'Output format: one line per phrase, exactly like this:\n' +
-        '[0.00 - 2.34] First phrase spoken\n' +
-        '[2.34 - 5.12] Second phrase spoken\n' +
-        '[5.12 - 7.80] Third phrase spoken\n\n' +
-        'Rules:\n' +
-        '- Each phrase: 3-8 words maximum (short enough for subtitle display)\n' +
-        '- Times are seconds from start of THIS audio clip (not absolute)\n' +
-        '- Times must increase (next start >= previous end)\n' +
-        '- Last end time must not exceed ' + Math.round(chunkDurationSec) + ' seconds\n' +
-        '- Use 2 decimal places (e.g. 1.23 not 1.234)\n' +
-        '- NO other text, no preamble, no explanation, ONLY the timestamped lines\n' +
-        '- If no speech, return: [0.00 - 0.00] (empty)\n\n' +
-        'Begin transcription now.'
+        'Listen to this ' + dur + '-second audio clip and transcribe it with timestamps.\n' +
+        'Split the speech into short phrases of 3-8 words. For each phrase report:\n' +
+        '- start: seconds from the start of THIS clip when the phrase begins\n' +
+        '- end: seconds when the phrase finishes\n' +
+        '- text: the exact words spoken\n' +
+        'Listen carefully for pauses and silences — timestamps must reflect when the words are ACTUALLY spoken, never an even spread across the clip. ' +
+        'All times must be between 0 and ' + dur + ', must increase monotonically, and use one decimal place. ' +
+        'Transcribe every word. If there is no speech, return an empty array.'
       }
     ]}],
-    generationConfig: { temperature: 0.0, maxOutputTokens: 4000 }
+    generationConfig: {
+      temperature: 0.0,
+      maxOutputTokens: 4000,
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            start: { type: 'NUMBER' },
+            end:   { type: 'NUMBER' },
+            text:  { type: 'STRING' }
+          },
+          required: ['start', 'end', 'text'],
+          propertyOrdering: ['start', 'end', 'text']
+        }
+      },
+      thinkingConfig: { thinkingBudget: 0 }
+    }
   };
-  const url = GEMINI_API_BASE + '/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(gemKey);
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    const msg = data?.error?.message || 'HTTP ' + res.status;
-    if (res.status === 429) throw new Error('RATE_LIMIT');
-    throw new Error(msg);
+  const callModel = async (model) => {
+    const url = GEMINI_API_BASE + '/models/' + model + ':generateContent?key=' + encodeURIComponent(gemKey);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data?.error?.message || 'HTTP ' + res.status;
+      if (res.status === 429) throw new Error('RATE_LIMIT');
+      throw new Error(msg);
+    }
+    return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+  };
+  let raw;
+  try {
+    raw = await callModel(GEMINI_TIMED_MODEL);
+  } catch (e) {
+    if (e.message === 'RATE_LIMIT') throw e; // let the caller's 429 backoff handle it
+    raw = await callModel(GEMINI_MODEL);     // model unavailable → try Lite
   }
-  const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
 
-  // Parse: [0.00 - 2.34] phrase text
-  const lineRe = /^\s*\[?\s*(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)\s*\]?\s*(.*)$/;
+  // Parse: structured JSON first, then object-by-object rescue (handles
+  // truncated output), then the legacy "[0.00 - 2.34] phrase" line format.
+  let items = null;
+  try { const p = JSON.parse(raw); if (Array.isArray(p)) items = p; } catch (e) { /* fall through */ }
+  if (!items) {
+    const objs = raw.match(/\{[^{}]*?"start"[^{}]*?\}/g);
+    if (objs && objs.length) {
+      items = [];
+      for (const o of objs) { try { items.push(JSON.parse(o)); } catch (e) { /* skip bad object */ } }
+    }
+  }
+  if (!items || !items.length) {
+    items = [];
+    const lineRe = /^\s*\[?\s*(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)\s*\]?\s*(.*)$/;
+    for (const line of raw.split('\n')) {
+      const m = line.match(lineRe);
+      if (m) items.push({ start: parseFloat(m[1]), end: parseFloat(m[2]), text: m[3].trim() });
+    }
+  }
+
+  // Per-segment validation with clamping — keep the good, repair the fixable,
+  // drop only the irredeemable.
   const segments = [];
-  let lastEnd = -0.01;
-  let validationFailed = false;
-  const reasons = [];
-
-  for (const line of raw.split('\n')) {
-    const m = line.match(lineRe);
-    if (!m) continue; // skip non-timestamp lines
-    const start = parseFloat(m[1]);
-    const end   = parseFloat(m[2]);
-    const text  = m[3].trim();
-    if (!text || text === '(empty)') continue;
-
-    // Validate
-    if (isNaN(start) || isNaN(end)) { validationFailed = true; reasons.push('NaN'); break; }
-    if (end < start)                { validationFailed = true; reasons.push('end<start'); break; }
-    if (start < lastEnd - 0.5)      { validationFailed = true; reasons.push('non-monotonic'); break; }  // 0.5s tolerance for overlap
-    if (end > chunkDurationSec + 1) { validationFailed = true; reasons.push('beyond-chunk'); break; }   // 1s tolerance
-    if (end - start > 15)           { validationFailed = true; reasons.push('too-long'); break; }      // single subtitle line > 15s = suspicious
-
+  let lastEnd = 0;
+  for (const it of items) {
+    let start = Number(it.start), end = Number(it.end);
+    const text = String(it.text || '').trim();
+    if (!text || text === '(empty)' || isNaN(start) || isNaN(end)) continue;
+    if (start > chunkDurationSec + 1) continue;                       // wildly out of range
+    start = Math.max(0, Math.min(start, chunkDurationSec));
+    end   = Math.max(0, Math.min(end,   chunkDurationSec + 0.5));
+    if (start < lastEnd - 0.3) start = lastEnd;                       // repair overlap
+    if (end <= start + 0.1) end = Math.min(chunkDurationSec + 0.5,    // repair collapsed span:
+      start + Math.max(0.5, 0.28 * text.split(/\s+/).length));        // ~0.28s per word
+    if (end - start > 15) continue;                                   // 15s+ "phrase" = hallucination
     segments.push({ start, end, text });
     lastEnd = end;
   }
 
-  // Build plain text from segments (for fallback distribution if validation failed)
-  const plainText = segments.map(s => s.text).join(' ').trim()
-    || raw.replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+  const plainText = (segments.length ? segments : items)
+    .map(s => String(s.text || '').trim()).filter(Boolean).join(' ').trim()
+    || raw.replace(/\[[^\]]*\]/g, '').replace(/[{}"\[\]]/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
-  if (validationFailed || segments.length === 0) {
-    console.warn('[gemini-timed] validation failed:', reasons.join(','), 'segments:', segments.length, 'raw start:', raw.substring(0, 200));
+  if (!segments.length) {
+    console.warn('[gemini-timed] no usable timestamps — raw start:', raw.substring(0, 200));
     return { text: plainText, segments: null };
   }
   return { text: plainText, segments: segments };
+}
+
+// ── Energy-based voice activity detection (VAD) ──────────────────────────────
+// Scans the decoded AudioBuffer and returns intervals of actual speech
+// [{start, end}] in seconds, or null if the audio is too quiet/flat to judge.
+// This is the ground truth that Gemini's estimated timestamps get anchored
+// to — it's computed locally from the real waveform, so it can't drift.
+function computeSpeechIntervals(decoded) {
+  try {
+    const sr = decoded.sampleRate;
+    const frameSec = 0.05;
+    const frameLen = Math.max(1, Math.round(sr * frameSec));
+    const ch0 = decoded.getChannelData(0);
+    const ch1 = decoded.numberOfChannels > 1 ? decoded.getChannelData(1) : null;
+    const nFrames = Math.floor(ch0.length / frameLen);
+    if (nFrames < 4) return null;
+    const rms = new Float32Array(nFrames);
+    for (let f = 0; f < nFrames; f++) {
+      let sum = 0;
+      const off = f * frameLen;
+      for (let i = 0; i < frameLen; i++) {
+        const s = ch1 ? (ch0[off + i] + ch1[off + i]) * 0.5 : ch0[off + i];
+        sum += s * s;
+      }
+      rms[f] = Math.sqrt(sum / frameLen);
+    }
+    // Adaptive threshold: noise floor (20th pct) + 15% of range up to 95th pct
+    const sorted = Array.from(rms).sort((a, b) => a - b);
+    const pct = p => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+    const noise = pct(0.2), peak = pct(0.95);
+    if (peak <= 0.0001 || peak - noise < 0.0005) return null; // silent or flat — VAD unreliable
+    const thr = noise + (peak - noise) * 0.15;
+    // Speech frames → merged intervals (bridging dips shorter than 0.25s)
+    const intervals = [];
+    let cur = null;
+    for (let f = 0; f < nFrames; f++) {
+      if (rms[f] < thr) continue;
+      const t0 = f * frameSec, t1 = t0 + frameSec;
+      if (cur && t0 - cur.end <= 0.25) cur.end = t1;
+      else { cur = { start: t0, end: t1 }; intervals.push(cur); }
+    }
+    // Drop sub-0.15s blips, pad edges slightly, then re-merge overlaps
+    const padded = intervals.filter(iv => iv.end - iv.start >= 0.15)
+      .map(iv => ({ start: Math.max(0, iv.start - 0.08), end: Math.min(decoded.duration, iv.end + 0.08) }));
+    const merged = [];
+    for (const iv of padded) {
+      const last = merged[merged.length - 1];
+      if (last && iv.start <= last.end + 0.01) last.end = Math.max(last.end, iv.end);
+      else merged.push({ start: iv.start, end: iv.end });
+    }
+    return merged.length ? merged : null;
+  } catch (e) {
+    console.warn('[vad] failed:', e.message);
+    return null;
+  }
+}
+
+// ── Snap estimated segment boundaries onto real speech onsets/offsets ────────
+// Gemini's phrase times are estimates; the VAD map knows where speech really
+// starts and stops. Boundaries within maxSnap seconds of a real onset/offset
+// get pulled onto it; starts stranded in silence jump forward to the next
+// onset. Boundaries in mid-speech (no nearby onset) are left alone — the
+// snap only corrects at pause edges, where drift is most visible.
+function snapSegmentsToSpeech(segs, intervals, maxSnap = 0.7) {
+  if (!segs || !segs.length || !intervals || !intervals.length) return segs;
+  const onsets  = intervals.map(iv => iv.start);
+  const offsets = intervals.map(iv => iv.end);
+  const nearest = (arr, t, max) => {
+    let best = null, bestD = max;
+    for (const v of arr) { const d = Math.abs(v - t); if (d <= bestD) { bestD = d; best = v; } }
+    return best;
+  };
+  const inSpeech = t => intervals.some(iv => t >= iv.start - 0.02 && t <= iv.end + 0.02);
+  const out = segs.map(s => ({ start: s.start, end: s.end, text: s.text }));
+  for (const s of out) {
+    const minDur = Math.max(0.5, 0.28 * s.text.split(/\s+/).filter(Boolean).length);
+    const on = nearest(onsets, s.start, maxSnap);
+    if (on != null) s.start = on;
+    else if (!inSpeech(s.start)) {
+      let nextOn = null;
+      for (const o of onsets) if (o > s.start && (nextOn == null || o < nextOn)) nextOn = o;
+      if (nextOn != null && nextOn < s.end) s.start = nextOn;
+    }
+    const off = nearest(offsets, s.end, maxSnap);
+    if (off != null && off > s.start + 0.2) s.end = off;
+    if (s.end <= s.start + 0.15) s.end = s.start + minDur;
+  }
+  // Re-enforce monotonic ordering after snapping
+  for (let i = 1; i < out.length; i++) {
+    if (out[i].start < out[i - 1].end - 0.05) out[i].start = Math.max(out[i - 1].end, out[i].start);
+    if (out[i].end < out[i].start + 0.15) out[i].end = out[i].start + 0.6;
+  }
+  return out;
+}
+
+// ── Distribute words across the *speech* portions of a time window ───────────
+// Fallback timing for when Gemini returns no usable timestamps. The old
+// approach spread words evenly across the whole window — silences included —
+// which is exactly what made subtitles run early or late. This version
+// spreads them across the VAD-detected speech intervals only, so pauses
+// no longer push the timing off. Falls back to plain even distribution
+// when no VAD data is available.
+function distributeWordsBySpeech(words, winStart, winEnd, intervals, maxSegSec = 3) {
+  if (!words || !words.length) return [];
+  const winDur = Math.max(0.1, winEnd - winStart);
+  const spans = (intervals || [])
+    .map(iv => ({ start: Math.max(iv.start, winStart), end: Math.min(iv.end, winEnd) }))
+    .filter(iv => iv.end - iv.start > 0.05);
+  const totalSpeech = spans.reduce((a, iv) => a + (iv.end - iv.start), 0);
+  // Map accumulated speech-seconds → clock time (walks the speech spans)
+  const toClock = u => {
+    if (!spans.length) return winStart + Math.min(winDur, Math.max(0, u));
+    let rem = u;
+    for (const iv of spans) {
+      const d = iv.end - iv.start;
+      if (rem <= d) return iv.start + rem;
+      rem -= d;
+    }
+    return spans[spans.length - 1].end;
+  };
+  const budget = spans.length ? totalSpeech : winDur;
+  const perWord = budget / words.length;
+  const wordsPerSeg = Math.max(2, Math.round(maxSegSec / Math.max(0.05, perWord)));
+  const out = [];
+  for (let j = 0; j < words.length; j += wordsPerSeg) {
+    const segWords = words.slice(j, j + wordsPerSeg);
+    out.push({
+      start: toClock(j * perWord),
+      end:   toClock((j + segWords.length) * perWord),
+      text:  segWords.join(' ')
+    });
+  }
+  return out;
+}
+
+// ── Silence-aware chunk boundaries ───────────────────────────────────────────
+// Prefer cutting audio chunks inside silence gaps near the target length so
+// words are never split across chunk edges and every chunk begins near a
+// speech onset — which keeps Gemini's chunk-relative estimates anchored.
+// Without VAD data, falls back to fixed-length boundaries (legacy behaviour).
+function findChunkBoundaries(totalSecs, targetLen, intervals) {
+  const boundaries = [0];
+  if (!intervals || !intervals.length) {
+    for (let t = targetLen; t < totalSecs; t += targetLen) boundaries.push(t);
+    boundaries.push(totalSecs);
+    return boundaries;
+  }
+  // Midpoints of silence gaps (≥0.3s) between speech intervals
+  const gaps = [];
+  for (let i = 0; i < intervals.length - 1; i++) {
+    const gs = intervals[i].end, ge = intervals[i + 1].start;
+    if (ge - gs >= 0.3) gaps.push((gs + ge) / 2);
+  }
+  let t = 0;
+  while (totalSecs - t > targetLen * 1.4) {
+    const target = t + targetLen;
+    let cut = null, bestD = 8; // search up to ±8s around the target
+    for (const gmid of gaps) {
+      const d = Math.abs(gmid - target);
+      if (gmid > t + 8 && d < bestD) { bestD = d; cut = gmid; }
+    }
+    t = cut != null ? cut : target;
+    boundaries.push(t);
+  }
+  boundaries.push(totalSecs);
+  return boundaries;
 }
 
 // ── Whisper fallback for one chunk ──────────────────────────────────────────────
@@ -18369,28 +18579,45 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
 
   // ── Path selection (Gemini-dominant policy) ─────────────────────────────
   // Priority: Gemini first (free under Kevin's Pro plan), Whisper only as
-  // fallback. The `timed` flag means we WANT word-level timestamps, but if
-  // Gemini works we'll accept its plain text and use even-distribution
-  // timing — keeps Kevin in his free quota.
+  // fallback. The `timed` flag means we WANT timestamps — Gemini supplies
+  // estimated phrase timing which we then anchor to the real waveform via
+  // VAD (below); Whisper supplies true word-level timing as fallback.
   const wantTimed     = !!opts.timed;
   const useGeminiFirst = !!gemKey;             // try Gemini first whenever a key is set
   const allowWhisper   = !!openaiKey;          // Whisper only as fallback path
   const useWhisper     = wantTimed && allowWhisper && !useGeminiFirst; // only timed-direct when no Gemini
 
+  // ── Voice-activity map (VAD) ─────────────────────────────────────────────
+  // Energy-scan of the decoded audio to find where speech actually happens.
+  // Used three ways when timestamps are wanted: (1) cut chunks in silences so
+  // words never split across chunk edges, (2) snap Gemini's estimated phrase
+  // boundaries onto real speech onsets, (3) distribute fallback timing over
+  // speech only instead of evenly across silences. Together these fix the
+  // early/late subtitle drift Gemini's estimates used to cause.
+  let speechIntervals = null;
+  if (wantTimed) {
+    statusFn('Analysing speech timing…', 'cyan');
+    speechIntervals = computeSpeechIntervals(decoded);
+  }
+
   // ── Chunk size — smaller for Gemini timed mode ────────────────────────
   // Gemini's estimated timestamps drift more across long chunks. By dropping
-  // chunk size from 85s → 20s when timestamps are wanted, the worst-case
-  // even-distribution fallback drift is bounded by chunk duration. Trade-off:
-  // ~4x more API calls (still <$0.02 per typical 9-min Runpreneur episode).
+  // chunk size from 85s → ~20s when timestamps are wanted, worst-case drift
+  // is bounded by chunk duration. Boundaries prefer silence gaps near the
+  // target length (see findChunkBoundaries). Trade-off: ~4x more API calls
+  // (still <$0.02 per typical 9-min Runpreneur episode).
   const CHUNK_FOR_THIS_RUN = (useGeminiFirst && wantTimed) ? 20 : CHUNK_SECS;
-  const nChunks   = Math.ceil(totalSecs / CHUNK_FOR_THIS_RUN);
+  const chunkBounds = findChunkBoundaries(totalSecs, CHUNK_FOR_THIS_RUN,
+    (useGeminiFirst && wantTimed) ? speechIntervals : null);
+  const nChunks   = chunkBounds.length - 1;
 
 
   // ── Chunk pacing (Gemini free tier RPM protection) ──────────────────────
-  // Gemini free tier = 15 requests/minute. To stay safely under, space chunks
-  // by 5 seconds. Only applies to Gemini path — Whisper paid tier doesn't
-  // need pacing. First chunk runs immediately; delay only between chunks.
-  const GEMINI_CHUNK_DELAY_MS = 5000;
+  // Free tier: 2.5-flash (timed path) ≈ 10 req/min, flash-lite ≈ 15 req/min.
+  // Space chunks accordingly to stay safely under. Only applies to Gemini
+  // path — Whisper paid tier doesn't need pacing. First chunk runs
+  // immediately; delay only between chunks.
+  const GEMINI_CHUNK_DELAY_MS = (useGeminiFirst && wantTimed) ? 7000 : 5000;
   const usePacing = useGeminiFirst && nChunks > 1;
   const pacingTotalDelaySec = usePacing ? Math.round((nChunks - 1) * GEMINI_CHUNK_DELAY_MS / 1000) : 0;
 
@@ -18409,8 +18636,8 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   let firstChunkError = null;
 
   for (let i = 0; i < nChunks; i++) {
-    const startSec = i * CHUNK_FOR_THIS_RUN;
-    const endSec   = Math.min((i + 1) * CHUNK_FOR_THIS_RUN, totalSecs);
+    const startSec = chunkBounds[i];
+    const endSec   = chunkBounds[i + 1];
 
     // Inter-chunk pacing for Gemini free tier — wait before chunk 2+ to stay
     // under 15 RPM. Shows live countdown so user knows we're not stuck.
@@ -18438,10 +18665,11 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
     if (useGeminiFirst) {
       // ── Step 1: Gemini ────────────────────────────────────────────────
       // When timestamps are wanted (Burn Subtitles ticked), use the TIMED
-      // variant — it asks Gemini to estimate timestamps per phrase. We then
-      // shift those chunk-relative times into absolute video timestamps.
-      // If Gemini's estimates fail validation, the segments stay null and
-      // the caller falls back to even-distribution within the chunk window.
+      // variant — it asks Gemini for per-phrase timestamps as JSON. We then
+      // shift those chunk-relative times into absolute video timestamps and
+      // (below) snap them onto real speech via the VAD map. If no usable
+      // timestamps come back, segments stay null and the caller falls back
+      // to speech-aware distribution within the chunk window.
       const chunkDur = endSec - startSec;
       try {
         if (wantTimed) {
@@ -18539,28 +18767,22 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
 
     if (text) parts.push(text);
 
-    // If timed requested but Whisper unavailable, fabricate segments by even
-    // word distribution within this chunk's time window
     if (wantTimed) {
       if (chunkWords && chunkWords.length) timedWords.push(...chunkWords);
       if (chunkSegs && chunkSegs.length) {
+        // Snap Gemini's estimated boundaries onto real speech from the VAD
+        // map. (Skipped for Whisper — chunkWords set — whose word timing is
+        // already measured, not estimated.)
+        if (!(chunkWords && chunkWords.length) && speechIntervals) {
+          chunkSegs = snapSegmentsToSpeech(chunkSegs, speechIntervals);
+        }
         timedSegments.push(...chunkSegs);
       } else if (text) {
+        // No usable timestamps for this chunk — distribute the words over
+        // the detected speech intervals (not the whole window) so silences
+        // don't push subtitles early or late.
         const words = text.split(/\s+/).filter(Boolean);
-        const chunkDur = endSec - startSec;
-        const wordsPerSec = words.length / Math.max(0.1, chunkDur);
-        // Group into ~3-sec windows by word count
-        const targetWordsPerSeg = Math.max(2, Math.round(wordsPerSec * 3));
-        for (let j = 0; j < words.length; j += targetWordsPerSeg) {
-          const segWords = words.slice(j, j + targetWordsPerSeg);
-          const fracStart = j / words.length;
-          const fracEnd   = Math.min(1, (j + targetWordsPerSeg) / words.length);
-          timedSegments.push({
-            start: startSec + chunkDur * fracStart,
-            end:   startSec + chunkDur * fracEnd,
-            text:  segWords.join(' ')
-          });
-        }
+        timedSegments.push(...distributeWordsBySpeech(words, startSec, endSec, speechIntervals));
       }
     }
   }
