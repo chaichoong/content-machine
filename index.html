@@ -1205,22 +1205,23 @@ Total distance so far —/40,075km</div>
             <span style="color:var(--text)">💬 Burn subtitles into export</span>
           </label>
           <div id="ie-sub-panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5">Transcribe Kevin's audio first. Subtitles will overlay during the main video portion (not the intro).</div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Gemini API Key (Primary)</div>
-            <input type="password" id="ie-gemini-key" placeholder="AIza... (auto-saved)"
-              style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;outline:none;margin-bottom:6px"
-              oninput="localStorage.setItem('cm_gemini_key',this.value)">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5">Transcribe Kevin's audio first. Subtitles will overlay during the main video portion (not the intro). Timing comes from a local Whisper engine that measures word-level timestamps from the audio itself — no API needed (first run downloads the model once, then it's cached).</div>
             <button id="ie-transcribe-btn" onclick="ieTranscribeForSubtitles()"
               style="width:100%;background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:6px">
-              ✨ Transcribe via Gemini
+              ✨ Transcribe (word-accurate)
             </button>
             <div id="ie-sub-status" style="font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;min-height:14px;line-height:1.4"></div>
 
-            <!-- Whisper fallback (collapsed by default) -->
+            <div style="font-size:10px;color:var(--muted);font-weight:600;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em">Gemini API Key (fallback)</div>
+            <input type="password" id="ie-gemini-key" placeholder="AIza... (auto-saved)"
+              style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;outline:none;margin-bottom:6px"
+              oninput="localStorage.setItem('cm_gemini_key',this.value)">
+
+            <!-- Whisper API fallback (collapsed by default) -->
             <details style="margin-top:8px;font-size:10px">
-              <summary style="cursor:pointer;color:var(--muted);user-select:none">⚙ Advanced: Whisper fallback</summary>
+              <summary style="cursor:pointer;color:var(--muted);user-select:none">⚙ Advanced: OpenAI Whisper fallback</summary>
               <div style="margin-top:6px;padding:8px;background:var(--bg);border-radius:5px">
-                <div style="color:var(--muted);font-size:9px;line-height:1.4;margin-bottom:6px">Only used if Gemini fails. Leave blank to skip.</div>
+                <div style="color:var(--muted);font-size:9px;line-height:1.4;margin-bottom:6px">Only used if local Whisper and Gemini both fail. Leave blank to skip.</div>
                 <input type="password" id="ie-openai-key" placeholder="sk-... (optional fallback)"
                   style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 9px;color:var(--text);font-size:10px;outline:none"
                   oninput="localStorage.setItem('cm_openai_key',this.value)">
@@ -7321,10 +7322,8 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
     if (!ieMainReady) { showToast('Upload a main video first', 'error'); return; }
     const gemKey = (g('ie-gemini-key')?.value || localStorage.getItem('cm_gemini_key') || '').trim();
     const oaiKey = (g('ie-openai-key')?.value || localStorage.getItem('cm_openai_key') || '').trim();
-    if (!gemKey && !oaiKey) {
-      showToast('Enter your Gemini API key (or OpenAI in Advanced)', 'error');
-      return;
-    }
+    // No key required — local Whisper handles timing without any API.
+    // Keys are only used as fallback engines if the local model can't load.
     if (gemKey) localStorage.setItem('cm_gemini_key', gemKey);
     if (oaiKey) localStorage.setItem('cm_openai_key', oaiKey);
 
@@ -7339,7 +7338,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
                           : 'var(--muted)';
     };
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Transcribing…'; }
-    setStatus(gemKey ? 'Preparing audio for Gemini…' : 'Preparing audio for Whisper…', 'cyan');
+    setStatus('Preparing audio for local Whisper…', 'cyan');
 
     try {
       if (typeof transcribeAndSave !== 'function') {
@@ -7347,9 +7346,9 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
       }
       const mainVid = g('ie-main-vid');
       const activeRecId = localStorage.getItem('cm_active_ep_id') || null;
-      // Gemini first, Whisper fallback. Gemini returns per-phrase timestamps
-      // which the engine snaps onto real speech via VAD analysis of the
-      // waveform; Whisper (fallback) supplies measured word-level timing.
+      // Local browser Whisper first — measures word-level timestamps straight
+      // from the waveform (frame-accurate, free, no API). Gemini (VAD-snapped
+      // estimates) and OpenAI Whisper only run if the local engine fails.
       const plainText = await transcribeAndSave(mainVid, activeRecId, setStatus, gemKey, oaiKey, { timed: true });
       const timed = transcribeAndSave._lastTimedText || '';
       const finalText = timed || plainText || '';
@@ -7372,7 +7371,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
 
       ieSubReady = true;
       const wc = (plainText || '').split(/\s+/).filter(Boolean).length;
-      const accuracy = timed ? '· speech-aligned timing' : '· even-distribution timing';
+      const accuracy = timed ? '· word-accurate timing' : '· even-distribution timing';
       setStatus('✅ ' + wc + ' words ready ' + accuracy + ' · subtitles will burn into export', 'green');
       showToast('Transcript ready — click Export to bake subtitles in', 'success');
     } catch (e) {
@@ -7381,7 +7380,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
       ieSubReady = false;
       showToast('Transcribe failed: ' + e.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '✨ Transcribe via Gemini'; }
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Transcribe (word-accurate)'; }
     }
   }
   window.ieTranscribeForSubtitles = ieTranscribeForSubtitles;
@@ -18310,6 +18309,90 @@ function findChunkBoundaries(totalSecs, targetLen, intervals) {
   return boundaries;
 }
 
+// ── Local Whisper (transformers.js) — measured word-level timestamps ─────────
+// Runs OpenAI's Whisper speech model entirely in the browser via WebGPU (or
+// WASM fallback). Unlike Gemini, which can only ESTIMATE when words are
+// spoken, Whisper measures word timing from the waveform itself through
+// cross-attention alignment — that's what makes subtitles frame-accurate.
+// Free, no API key; the model (~80MB) downloads once then is cached by the
+// browser. English-only models — the right fit for Kevin's episodes.
+const LOCAL_WHISPER_MODELS = [
+  'onnx-community/whisper-base.en_timestamped',  // best accuracy/speed balance
+  'onnx-community/whisper-tiny.en_timestamped'   // fallback: 3x smaller & faster
+];
+let _localWhisperPipe = null;       // resolved pipeline, reused for the session
+let _localWhisperSkipWebgpu = false; // set when WebGPU fails at inference time
+async function getLocalWhisperPipeline(statusFn = () => {}) {
+  if (_localWhisperPipe) return _localWhisperPipe;
+  const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6');
+  const progress = p => {
+    if (p && p.status === 'progress' && p.file && /\.onnx$/.test(p.file) && p.progress != null) {
+      statusFn('Downloading local speech model (one-time, cached after) — ' + Math.round(p.progress) + '%…', 'cyan');
+    }
+  };
+  const devices = _localWhisperSkipWebgpu ? ['wasm'] : ['webgpu', 'wasm'];
+  let lastErr = null;
+  for (const model of LOCAL_WHISPER_MODELS) {
+    for (const device of devices) {
+      try {
+        // WebGPU: fp32 encoder for max GPU compatibility + q4 decoder (small
+        // download, quality unaffected for ASR). WASM: q8 all round.
+        _localWhisperPipe = await pipeline('automatic-speech-recognition', model, {
+          device,
+          dtype: device === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8',
+          progress_callback: progress
+        });
+        _localWhisperPipe.__device = device;
+        console.log('[local-whisper] loaded', model, 'on', device);
+        return _localWhisperPipe;
+      } catch (e) {
+        lastErr = e;
+        console.warn('[local-whisper] ' + model + ' on ' + device + ' failed:', e.message);
+      }
+    }
+  }
+  throw lastErr || new Error('could not load local Whisper model');
+}
+
+// Transcribe a decoded AudioBuffer locally. Returns [{start, end, text}] words
+// with real measured timestamps, ready for buildContinuousChunks().
+async function localWhisperTranscribeTimed(decoded, statusFn = () => {}) {
+  statusFn('Loading local Whisper engine (word-accurate timing)…', 'cyan');
+  const pipe = await getLocalWhisperPipeline(statusFn);
+  // Whisper expects 16 kHz mono PCM — resample via OfflineAudioContext
+  const TARGET_SR = 16000;
+  const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * TARGET_SR), TARGET_SR);
+  const src = off.createBufferSource();
+  src.buffer = decoded;
+  src.connect(off.destination);
+  src.start();
+  const audio = (await off.startRendering()).getChannelData(0);
+  statusFn('Transcribing ' + Math.round(decoded.duration) + 's locally on your machine — no API, no quota…', 'cyan');
+  let out;
+  try {
+    out = await pipe(audio, {
+      return_timestamps: 'word',
+      chunk_length_s: 30,
+      stride_length_s: 5
+    });
+  } catch (e) {
+    // Inference failure (usually a WebGPU driver quirk) — drop the cached
+    // pipeline and blacklist WebGPU so the next attempt rebuilds on WASM.
+    if (pipe.__device === 'webgpu') _localWhisperSkipWebgpu = true;
+    _localWhisperPipe = null;
+    throw e;
+  }
+  const words = (out?.chunks || [])
+    .map(c => ({
+      text:  String(c.text || '').trim(),
+      start: Array.isArray(c.timestamp) ? c.timestamp[0] : null,
+      end:   Array.isArray(c.timestamp) ? c.timestamp[1] : null
+    }))
+    .filter(w => w.text && w.start != null && w.end != null && isFinite(w.start) && isFinite(w.end));
+  if (!words.length) throw new Error('local Whisper returned no words');
+  return words;
+}
+
 // ── Whisper fallback for one chunk ──────────────────────────────────────────────
 async function whisperTranscribeChunk(wavBlob, openaiKey) {
   const fd = new FormData();
@@ -18551,7 +18634,9 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   gemKey    = (gemKey    || localStorage.getItem('cm_gemini_key') || '').trim();
   openaiKey = (openaiKey || localStorage.getItem('cm_openai_key') || localStorage.getItem('cm_whisper_key') || '').trim();
 
-  if (!gemKey && !openaiKey) {
+  // Timed mode can run entirely locally (browser Whisper) with no API key —
+  // only bail early when a key-requiring plain-text transcription is asked for.
+  if (!gemKey && !openaiKey && !opts.timed) {
     statusFn('No API key — add Gemini or OpenAI key in Settings', 'red');
     showToast('Add a Gemini or OpenAI key in Settings to enable auto-transcription', 'error');
     return null;
@@ -18575,7 +18660,32 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   const totalSecs = decoded.duration;
   const parts     = [];
   const timedSegments = []; // collected when opts.timed is true
-  const timedWords    = []; // word-level timestamps (Whisper only) — eliminates drift
+  const timedWords    = []; // word-level timestamps (local/API Whisper) — eliminates drift
+
+  // ── Local Whisper first (timed mode) ─────────────────────────────────────
+  // When timestamps are wanted, run Whisper in the browser BEFORE any API
+  // path. It measures word timing from the actual waveform (frame-accurate),
+  // needs no key and costs nothing. Gemini/OpenAI only run if this fails
+  // (e.g. model download blocked, out-of-memory tab).
+  let localTimedDone = false;
+  if (opts.timed) {
+    try {
+      const words = await localWhisperTranscribeTimed(decoded, statusFn);
+      timedWords.push(...words);
+      parts.push(words.map(w => w.text).join(' ').replace(/\s+/g, ' ').trim());
+      localTimedDone = true;
+      statusFn('✓ ' + words.length + ' words transcribed locally with measured timestamps', 'green');
+    } catch (e) {
+      console.warn('[local-whisper] falling back to API transcription:', e);
+      statusFn('Local Whisper unavailable (' + e.message + ')' +
+        (gemKey || openaiKey ? ' — falling back to API transcription…' : ''), 'cyan');
+    }
+    if (!localTimedDone && !gemKey && !openaiKey) {
+      statusFn('Local transcription failed and no API key set — add a Gemini or OpenAI key in Settings', 'red');
+      showToast('Local Whisper failed and no API key configured as fallback', 'error');
+      return null;
+    }
+  }
 
   // ── Path selection (Gemini-dominant policy) ─────────────────────────────
   // Priority: Gemini first (free under Kevin's Pro plan), Whisper only as
@@ -18595,7 +18705,7 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   // speech only instead of evenly across silences. Together these fix the
   // early/late subtitle drift Gemini's estimates used to cause.
   let speechIntervals = null;
-  if (wantTimed) {
+  if (wantTimed && !localTimedDone) {
     statusFn('Analysing speech timing…', 'cyan');
     speechIntervals = computeSpeechIntervals(decoded);
   }
@@ -18622,7 +18732,10 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   const pacingTotalDelaySec = usePacing ? Math.round((nChunks - 1) * GEMINI_CHUNK_DELAY_MS / 1000) : 0;
 
   // Upfront time estimate so user knows what they're committing to
-  if (usePacing) {
+  if (localTimedDone) {
+    // Local Whisper already produced the full timed transcript — the API
+    // chunk loop below is skipped entirely.
+  } else if (usePacing) {
     statusFn('Transcribing ' + Math.round(totalSecs) + 's of audio in ' + nChunks +
              ' chunks · pacing ' + (GEMINI_CHUNK_DELAY_MS / 1000) + 's between chunks ' +
              '(~' + pacingTotalDelaySec + 's added to stay under free-tier limits)', 'cyan');
@@ -18635,7 +18748,7 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   // useful than the generic "Transcription returned empty".
   let firstChunkError = null;
 
-  for (let i = 0; i < nChunks; i++) {
+  for (let i = 0; !localTimedDone && i < nChunks; i++) {
     const startSec = chunkBounds[i];
     const endSec   = chunkBounds[i + 1];
 
@@ -18846,7 +18959,7 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
     if (rec) (rec.fields || rec).description = saveText;
     const ok = await atUpdate(recId, { description: saveText });
     if (ok) {
-      const tag = wantTimed && timedSegments.length ? ' (timed)' : '';
+      const tag = wantTimed && (timedWords.length || timedSegments.length) ? ' (timed)' : '';
       statusFn('✅ ' + wc + ' words transcribed' + tag + ' and saved to Airtable', 'green');
       showToast('Transcription saved (' + wc + ' words) ✓', 'success');
     } else {
@@ -18859,7 +18972,7 @@ async function transcribeAndSave(videoEl, recId, statusFn = () => {}, gemKey = '
   // Return plain text (consumers expect plain text); they can re-parse from Airtable if they need timing
   // Side channel: store the formatted timed text on a known property so callers
   // that need timing-aware output (Add Subtitle) can pick it up immediately.
-  if (wantTimed && timedSegments.length) {
+  if (wantTimed && (timedWords.length || timedSegments.length)) {
     transcribeAndSave._lastTimedText = saveText;
   } else {
     transcribeAndSave._lastTimedText = null;
