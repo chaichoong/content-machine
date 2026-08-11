@@ -1205,14 +1205,14 @@ Total distance so far —/40,075km</div>
             <span style="color:var(--text)">💬 Burn subtitles into export</span>
           </label>
           <div id="ie-sub-panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5">Transcribe Kevin's audio first. Subtitles will overlay during the main video portion (not the intro). Timing comes from a local Whisper engine that measures word-level timestamps from the audio itself — no API needed (first run downloads the model once, then it's cached).</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5">Transcribe Kevin's audio first. Subtitles will overlay during the main video portion (not the intro). <b>100% free</b> — transcription runs on this computer with word-accurate timing measured from the audio itself (first run downloads the speech model once, then it's cached). If the local engine can't run, your Gemini key below is used automatically (free tier).</div>
             <button id="ie-transcribe-btn" onclick="ieTranscribeForSubtitles()"
               style="width:100%;background:#DCE5F2;border:1px solid #C0CFE3;color:#3560A8;padding:8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:6px">
               ✨ Transcribe (word-accurate)
             </button>
             <div id="ie-sub-status" style="font-size:10px;color:var(--muted);font-family:'DM Sans',sans-serif;min-height:14px;line-height:1.4"></div>
 
-            <div style="font-size:10px;color:var(--muted);font-weight:600;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em">Gemini API Key (fallback)</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em">Gemini API Key (free fallback — used only if local engine fails)</div>
             <input type="password" id="ie-gemini-key" placeholder="AIza... (auto-saved)"
               style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;outline:none;margin-bottom:6px"
               oninput="localStorage.setItem('cm_gemini_key',this.value)">
@@ -1221,7 +1221,7 @@ Total distance so far —/40,075km</div>
             <details style="margin-top:8px;font-size:10px">
               <summary style="cursor:pointer;color:var(--muted);user-select:none">⚙ Advanced: OpenAI Whisper fallback</summary>
               <div style="margin-top:6px;padding:8px;background:var(--bg);border-radius:5px">
-                <div style="color:var(--muted);font-size:9px;line-height:1.4;margin-bottom:6px">Only used if local Whisper and Gemini both fail. Leave blank to skip.</div>
+                <div style="color:var(--muted);font-size:9px;line-height:1.4;margin-bottom:6px">⚠ Paid API — only used if local Whisper AND Gemini both fail, and only if you enter a key here. Leave blank to guarantee zero cost.</div>
                 <input type="password" id="ie-openai-key" placeholder="sk-... (optional fallback)"
                   style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 9px;color:var(--text);font-size:10px;outline:none"
                   oninput="localStorage.setItem('cm_openai_key',this.value)">
