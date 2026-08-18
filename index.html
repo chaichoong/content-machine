@@ -75,10 +75,13 @@
   .cal-btn:hover{border-color:var(--accent);color:var(--accent)}
   .cal-today-btn{background:var(--accent);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
   .calendar{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  .cal-header{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-header{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
   .cal-day-name{padding:10px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2)}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-  .cal-cell{min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative}
+  /* minmax(0,1fr) + min-width:0 stop long no-wrap event titles from blowing
+     the columns out — without this the grid clips to ~3 visible days and the
+     dates stop lining up under the Mon-Sun header. */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .cal-cell{min-height:90px;min-width:0;overflow:hidden;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative}
   .cal-cell:nth-child(7n){border-right:none}
   .cal-num{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;font-family:'DM Sans',sans-serif;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
   .cal-num.today{background:var(--accent);color:white;border-radius:50%;font-size:11px}
@@ -94,6 +97,9 @@
   .cal-event.ready{background:#ECE6F3;border-left-color:var(--pink);color:#6B4F8E}
   .cal-overflow{font-size:10px;color:var(--muted);padding:2px 5px;cursor:pointer}
   .cal-overflow:hover{color:var(--accent)}
+  .cal-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:0 0 10px;font-size:11px;color:var(--muted)}
+  .cal-legend .chip{display:inline-flex;align-items:center;gap:5px}
+  .cal-legend .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(28,36,34,.55);z-index:1000;align-items:center;justify-content:center;padding:20px}
   .modal-overlay.open{display:flex}
   .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;animation:modalIn .2s ease}
@@ -301,6 +307,13 @@
       <h2 id="cal-month-label"></h2>
       <button class="cal-btn" onclick="calNext()">›</button>
       <button class="cal-today-btn" onclick="calToday()">Today</button>
+    </div>
+    <div class="cal-legend">
+      <span class="chip"><span class="dot" style="background:#2C6E49"></span>✓ Published (on actual publish date)</span>
+      <span class="chip"><span class="dot" style="background:#3560A8"></span>Editing</span>
+      <span class="chip"><span class="dot" style="background:#8A6B2D"></span>Quality Control</span>
+      <span class="chip"><span class="dot" style="background:#6B4F8E"></span>Ready to Publish</span>
+      <span class="chip"><span class="dot" style="background:var(--accent)"></span>Scheduled (target date)</span>
     </div>
     <div class="calendar">
       <div class="cal-header"><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div><div class="cal-day-name">Sun</div></div>
@@ -2338,7 +2351,12 @@ function renderCalendar() {
   const dateMap = {};
   const seenForDay = {}; // day-num -> Set of record ids, prevents same record appearing twice
   allRecords.forEach(r => {
-    [fv(r,'pubDate'), fv(r,'dateYT'), fv(r,'dateOther')].filter(Boolean).forEach(d => {
+    // Once an episode has an ACTUAL publish date (YouTube/other), the calendar
+    // shows it there and only there — the target date was just a plan and no
+    // longer needs adding, the record has caught up with reality.
+    const actual = [fv(r,'dateYT'), fv(r,'dateOther')].filter(Boolean);
+    const dates  = actual.length ? actual : [fv(r,'pubDate')].filter(Boolean);
+    dates.forEach(d => {
       const dt = new Date(d + 'T00:00:00');
       if (dt.getFullYear() === calYear && dt.getMonth() === calMonth) {
         const day = dt.getDate();
@@ -2370,8 +2388,9 @@ function renderCalendar() {
       <div class="cal-num ${isToday?'today':''} ${!c.cur?'other-month':''}">${c.day}</div>
       ${show.map(r => {
         const safeName = escapeHtml(fv(r,'name')||'—');
-        return `<div class="cal-event ${statusCls[fv(r,'status')]||''}" title="${safeName}">
-          <span class="cal-event-name" onclick="openDetail('${r.id}')">${safeName}</span>
+        const isPublished = fv(r,'status') === 'Published' || !!(fv(r,'dateYT') || fv(r,'dateOther'));
+        return `<div class="cal-event ${isPublished ? 'pub' : (statusCls[fv(r,'status')]||'')}" title="${safeName}">
+          <span class="cal-event-name" onclick="openDetail('${r.id}')">${isPublished ? '✓ ' : ''}${safeName}</span>
           <button class="cal-event-edit" title="Edit record" onclick="event.stopPropagation();openEditDrawer('${r.id}')">✏</button>
         </div>`;
       }).join('')}
@@ -2383,9 +2402,12 @@ function renderCalendar() {
 // ── Show full day list when "+N more" is clicked on a calendar cell ──────────
 function calShowDay(day) {
   const dt = new Date(calYear, calMonth, day);
-  const dateStr = dt.toISOString().slice(0,10);
+  const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   const list = allRecords.filter(r => {
-    return [fv(r,'pubDate'), fv(r,'dateYT'), fv(r,'dateOther')].includes(dateStr);
+    // Same rule as the grid: actual publish dates win; target only until then
+    const actual = [fv(r,'dateYT'), fv(r,'dateOther')].filter(Boolean);
+    const dates  = actual.length ? actual : [fv(r,'pubDate')].filter(Boolean);
+    return dates.includes(dateStr);
   });
   // Dedup by id
   const seen = new Set(); const unique = [];
