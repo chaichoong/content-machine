@@ -76,25 +76,30 @@
   .cal-today-btn{background:var(--accent);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
   .calendar{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
   .cal-header{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-  .cal-day-name{padding:10px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .cal-day-name{padding:8px 0;text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
   /* minmax(0,1fr) + min-width:0 stop long no-wrap event titles from blowing
      the columns out — without this the grid clips to ~3 visible days and the
      dates stop lining up under the Mon-Sun header. */
+  /* Google Calendar-style month grid: light gridlines, date number centred
+     at the top of each cell, solid rounded event chips.
+     minmax(0,1fr) + min-width:0 stop long no-wrap event titles from blowing
+     the columns out — without this the grid clips to ~3 visible days and the
+     dates stop lining up under the Mon-Sun header. */
   .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-  .cal-cell{min-height:90px;min-width:0;overflow:hidden;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative}
+  .cal-cell{min-height:104px;min-width:0;overflow:hidden;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 5px 6px;position:relative;background:var(--surface)}
   .cal-cell:nth-child(7n){border-right:none}
-  .cal-num{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;font-family:'DM Sans',sans-serif;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
-  .cal-num.today{background:var(--accent);color:white;border-radius:50%;font-size:11px}
-  .cal-num.other-month{color:rgba(90,102,96,.4)}
-  .cal-event{border-left:2px solid var(--accent);color:var(--accent2);background:rgba(44,110,73,.10);font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px}
-  .cal-event:hover{opacity:.85}
+  .cal-num{font-size:12px;font-weight:500;color:var(--text);margin:0 auto 4px;font-family:'DM Sans',sans-serif;width:max-content;min-width:24px;height:24px;padding:0 6px;display:flex;align-items:center;justify-content:center;border-radius:12px}
+  .cal-num.today{background:var(--accent);color:white;font-weight:600}
+  .cal-num.other-month{color:rgba(90,102,96,.45)}
+  .cal-event{font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:4px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px;background:#5F7A6C;color:#fff}
+  .cal-event:hover{filter:brightness(1.08)}
   .cal-event-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cal-event-edit{flex-shrink:0;background:rgba(28,36,34,.18);border:none;color:inherit;border-radius:3px;padding:0 4px;font-size:10px;cursor:pointer;line-height:1.4;opacity:0;transition:opacity .15s}
+  .cal-event-edit{flex-shrink:0;background:rgba(255,255,255,.22);border:none;color:inherit;border-radius:3px;padding:0 4px;font-size:10px;cursor:pointer;line-height:1.4;opacity:0;transition:opacity .15s}
   .cal-event:hover .cal-event-edit{opacity:1}
-  .cal-event.pub{background:#DDE8DF;border-left-color:var(--green);color:#2C6E49}
-  .cal-event.edit{background:#DCE5F2;border-left-color:var(--blue);color:#3560A8}
-  .cal-event.qc{background:#F7EFD9;border-left-color:var(--yellow);color:#8A6B2D}
-  .cal-event.ready{background:#ECE6F3;border-left-color:var(--pink);color:#6B4F8E}
+  .cal-event.pub{background:#2C6E49}
+  .cal-event.edit{background:#3560A8}
+  .cal-event.qc{background:#B58A2D}
+  .cal-event.ready{background:#6B4F8E}
   .cal-overflow{font-size:10px;color:var(--muted);padding:2px 5px;cursor:pointer}
   .cal-overflow:hover{color:var(--accent)}
   .cal-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:0 0 10px;font-size:11px;color:var(--muted)}
@@ -311,9 +316,9 @@
     <div class="cal-legend">
       <span class="chip"><span class="dot" style="background:#2C6E49"></span>✓ Published (on actual publish date)</span>
       <span class="chip"><span class="dot" style="background:#3560A8"></span>Editing</span>
-      <span class="chip"><span class="dot" style="background:#8A6B2D"></span>Quality Control</span>
+      <span class="chip"><span class="dot" style="background:#B58A2D"></span>Quality Control</span>
       <span class="chip"><span class="dot" style="background:#6B4F8E"></span>Ready to Publish</span>
-      <span class="chip"><span class="dot" style="background:var(--accent)"></span>Scheduled (target date)</span>
+      <span class="chip"><span class="dot" style="background:#5F7A6C"></span>Scheduled (target date)</span>
     </div>
     <div class="calendar">
       <div class="cal-header"><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div><div class="cal-day-name">Sun</div></div>
@@ -2370,22 +2375,27 @@ function renderCalendar() {
   });
 
   const cells = [];
-  for (let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, cur: false });
-  for (let d = 1; d <= daysInMonth; d++)   cells.push({ day: d, cur: true });
-  for (let d = 1; cells.length < 42; d++)  cells.push({ day: d, cur: false });
+  for (let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, cur: false, next: false });
+  for (let d = 1; d <= daysInMonth; d++)   cells.push({ day: d, cur: true,  next: false });
+  for (let d = 1; cells.length < 42; d++)  cells.push({ day: d, cur: false, next: true  });
 
   const statusCls = {
     'Published':'pub','Editing and Optimisation in Progress':'edit',
     'Quality Control':'qc','Ready to publish on other platforms':'ready','Approved for Publishing':'ready'
   };
 
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
   document.getElementById('cal-grid').innerHTML = cells.map(c => {
     const isToday = c.cur && c.day === today.getDate() && calYear === today.getFullYear() && calMonth === today.getMonth();
     const recs = (c.cur && dateMap[c.day]) || [];
     const show = recs.slice(0, 3);
     const more = recs.length - 3;
+    // Google-style month marker on the 1st of each month ("1 Aug", "1 Sept")
+    const label = c.day === 1
+      ? c.day + ' ' + MONTHS_SHORT[c.cur ? calMonth : (c.next ? (calMonth + 1) % 12 : (calMonth + 11) % 12)]
+      : c.day;
     return `<div class="cal-cell">
-      <div class="cal-num ${isToday?'today':''} ${!c.cur?'other-month':''}">${c.day}</div>
+      <div class="cal-num ${isToday?'today':''} ${!c.cur?'other-month':''}">${label}</div>
       ${show.map(r => {
         const safeName = escapeHtml(fv(r,'name')||'—');
         const isPublished = fv(r,'status') === 'Published' || !!(fv(r,'dateYT') || fv(r,'dateOther'));
